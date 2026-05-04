@@ -1349,8 +1349,13 @@ async function loadFromGitHub() {
     }));
 
     const newQlrr = Object.entries(syncData.qlrr).map(([cont, val]) => {
-      const parts = val.split('|');
-      return { cont, cang: parts[0], hangHoa: parts[1] || '' };
+      const parts = (val||'').split('|');
+      return {
+        cont,
+        cang:        parts[0] || 'Cát Lái',
+        hangHoa:     parts[1] || '',
+        donViDeNghi: parts[2] || 'KV1'
+      };
     });
 
     // Cập nhật state
@@ -2181,10 +2186,14 @@ async function syncToGitHub() {
   document.getElementById('btnSync').textContent = '⏳ Đang đồng bộ...';
 
   try {
-    // Chuẩn bị dữ liệu đồng bộ
+    // Chuẩn bị dữ liệu đồng bộ — lưu TẤT CẢ cont từ QLRR
     const qlrrMin = {};
     qlrrData.forEach(r => {
-      if (r.cont) qlrrMin[r.cont] = (r.cang||'') + '|' + (r.hangHoa||'').substring(0,60).replace(/[|]/g,'');
+      if (!r.cont) return;
+      // Lưu đủ: cang|hangHoa|donViDeNghi
+      qlrrMin[r.cont] = (r.cang||'Cát Lái') + '|'
+        + (r.hangHoa||'').substring(0,60).replace(/[|]/g,'') + '|'
+        + (r.donViDeNghi||'KV1');
     });
 
     const dasoiMin = dasoiData.map(r => ([
@@ -2417,8 +2426,8 @@ function exportAppWithData() {
   var scriptCode = initScript + '\n'
     + 'var dm=Object.create(null);\n'
     + 'for(var i=0;i<_dd.length;i++){var r=_dd[i];dm[r[0]]={c:r[0],s:r[1],n:r[2],ns:r[3],nn:r[4],pi:r[5],ps:r[6],nd:r[7],cg:r[8]};}\n'
-    + 'var allC=Object.keys(dm);\n'
-    + 'Object.keys(_qd).forEach(function(k){if(!dm[k])allC.push(k);});\n'
+    + 'var allC=Object.keys(_qd);\n'
+    + 'Object.keys(dm).forEach(function(k){if(_qd[k]===undefined)allC.push(k);});\n'
     + 'var nSoi=0,nNV=0,nChua=0;\n'
     + 'for(var k in dm){if(dm[k].s){nSoi++;if(dm[k].n)nNV++;}else nChua++;}\n'
     + 'document.getElementById("stc").textContent=allC.length;\n'
