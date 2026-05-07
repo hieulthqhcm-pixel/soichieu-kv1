@@ -838,6 +838,10 @@
         style="background:linear-gradient(135deg,#6c3fc5,#8b5cf6);color:white;box-shadow:0 4px 16px rgba(108,63,197,0.35);">
         📱 Xuất App → iPhone
       </button>
+      <button class="btn" onclick="showBaoCaoDonViModal()" id="btnBaoCaoDonVi" disabled
+        style="background:linear-gradient(135deg,#0e4a6e,#0ea5e9);color:white;box-shadow:0 4px 16px rgba(14,165,233,0.35);font-size:12px;padding:10px;">
+        📊 Xuất BC Theo Đơn Vị
+      </button>
       <button class="btn" onclick="showBaoCaoThangModal()" id="btnBaoCaoThang" disabled
         style="background:linear-gradient(135deg,#1a3a6e,#2563eb);color:white;box-shadow:0 4px 16px rgba(37,99,235,0.35);font-size:12px;padding:10px;">
         📄 Xuất Báo Cáo Tháng (.docx)
@@ -1130,6 +1134,78 @@
       <button onclick="exportBaoCaoThang()"
         style="background:linear-gradient(135deg,#1a3a6e,#2563eb);color:white;border:none;border-radius:8px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;margin-top:4px;">
         📄 Tạo File Word (.docx)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BÁO CÁO THEO ĐƠN VỊ -->
+<div id="baocaoDonViModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);" onclick="if(event.target===this)this.style.display='none'">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:500px;width:92vw;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div style="font-size:15px;font-weight:700;color:#0ea5e9;">📊 Xuất BC Theo Đơn Vị Lựa Chọn</div>
+      <button onclick="document.getElementById('baocaoDonViModal').style.display='none'" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;">✕</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px;">
+
+      <div style="background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.3);border-radius:8px;padding:12px;font-size:12px;color:#7dd3fc;">
+        📝 Định mức: KV1=50%, QLRR=30%, KSHQ=20%, Khác=5% × 24 cont/ngày/cảng
+      </div>
+
+      <!-- Kỳ báo cáo -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">📅 Từ ngày</label>
+          <input type="date" id="dvTuNgay" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-size:12px;outline:none;font-family:'JetBrains Mono',monospace;">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">📅 Đến ngày</label>
+          <input type="date" id="dvDenNgay" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-size:12px;outline:none;font-family:'JetBrains Mono',monospace;">
+        </div>
+      </div>
+
+      <!-- Lũy kế -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">📊 Lũy kế từ ngày</label>
+          <input type="date" id="dvLuyTuNgay" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-size:12px;outline:none;font-family:'JetBrains Mono',monospace;">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">📊 Lũy kế đến ngày</label>
+          <input type="date" id="dvLuyDenNgay" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-size:12px;outline:none;font-family:'JetBrains Mono',monospace;">
+        </div>
+      </div>
+
+      <!-- Ngày hoạt động từng cảng -->
+      <div style="background:rgba(255,214,102,0.08);border:1px solid rgba(255,214,102,0.3);border-radius:8px;padding:12px;">
+        <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:10px;">🏢 Số ngày hoạt động (ngày làm việc thực tế)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">Cát Lái + Giang Nam — kỳ BC</label>
+            <input type="number" id="dvNgayCatLai" min="1" max="31" placeholder="VD: 22"
+              style="width:100%;background:var(--navy);border:1px solid rgba(255,214,102,0.4);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;outline:none;font-family:'JetBrains Mono',monospace;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">SP-ITC — kỳ BC</label>
+            <input type="number" id="dvNgaySPITC" min="1" max="31" placeholder="VD: 22"
+              style="width:100%;background:var(--navy);border:1px solid rgba(255,214,102,0.4);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;outline:none;font-family:'JetBrains Mono',monospace;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">Cát Lái + Giang Nam — lũy kế</label>
+            <input type="number" id="dvNgayCatLaiLuy" min="1" max="366" placeholder="VD: 85"
+              style="width:100%;background:var(--navy);border:1px solid rgba(255,214,102,0.4);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;outline:none;font-family:'JetBrains Mono',monospace;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">SP-ITC — lũy kế</label>
+            <input type="number" id="dvNgaySPITCLuy" min="1" max="366" placeholder="VD: 85"
+              style="width:100%;background:var(--navy);border:1px solid rgba(255,214,102,0.4);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;outline:none;font-family:'JetBrains Mono',monospace;">
+          </div>
+        </div>
+      </div>
+
+      <button onclick="exportBaoCaoDonVi()"
+        style="background:linear-gradient(135deg,#0e4a6e,#0ea5e9);color:white;border:none;border-radius:8px;padding:13px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;margin-top:4px;">
+        📊 Tạo File Excel (.xlsx)
       </button>
     </div>
   </div>
@@ -1693,6 +1769,7 @@ function checkReadyState() {
   document.getElementById('btnExportApp').disabled = !ready;
   document.getElementById('btnExportQLRR').disabled = !ready;
   document.getElementById('btnCanhBao').disabled = !ready;
+  document.getElementById('btnBaoCaoDonVi').disabled = !ready;
   document.getElementById('btnBaoCaoThang').disabled = !ready;
   document.getElementById('btnSync').disabled = !ready;
   if (qlrrData.length > 0) document.getElementById('btnExport').disabled = false;
@@ -3122,7 +3199,238 @@ function exportQLRR() {
   showToast('✅ Đã xuất đủ 5 Biểu mẫu QLRR!');
 }
 
-// ─── MODAL BÁO CÁO THÁNG ───
+
+// ─── MODAL BÁO CÁO THEO ĐƠN VỊ ───
+function showBaoCaoDonViModal() {
+  const today = new Date();
+  const fmt = d => d.toISOString().split('T')[0];
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastDay  = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const firstYear = new Date(today.getFullYear(), 0, 1);
+
+  document.getElementById('dvTuNgay').value     = fmt(firstDay);
+  document.getElementById('dvDenNgay').value    = fmt(lastDay);
+  document.getElementById('dvLuyTuNgay').value  = fmt(firstYear);
+  document.getElementById('dvLuyDenNgay').value = fmt(lastDay);
+
+  // Tính ngày làm việc tháng hiện tại gợi ý
+  let wdMonth = 0, wdYear = 0;
+  for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate()+1)) {
+    if (d.getDay()!==0 && d.getDay()!==6) wdMonth++;
+  }
+  for (let d = new Date(firstYear); d <= lastDay; d.setDate(d.getDate()+1)) {
+    if (d.getDay()!==0 && d.getDay()!==6) wdYear++;
+  }
+  document.getElementById('dvNgayCatLai').value    = wdMonth;
+  document.getElementById('dvNgaySPITC').value     = wdMonth;
+  document.getElementById('dvNgayCatLaiLuy').value = wdYear;
+  document.getElementById('dvNgaySPITCLuy').value  = wdYear;
+
+  document.getElementById('baocaoDonViModal').style.display = '';
+}
+
+// ─── XUẤT BÁO CÁO THEO ĐƠN VỊ ───
+function exportBaoCaoDonVi() {
+  const tuNgay     = document.getElementById('dvTuNgay').value;
+  const denNgay    = document.getElementById('dvDenNgay').value;
+  const luyTuNgay  = document.getElementById('dvLuyTuNgay').value;
+  const luyDenNgay = document.getElementById('dvLuyDenNgay').value;
+  const ngayCL     = parseInt(document.getElementById('dvNgayCatLai').value) || 0;
+  const ngaySP     = parseInt(document.getElementById('dvNgaySPITC').value) || 0;
+  const ngayCLLuy  = parseInt(document.getElementById('dvNgayCatLaiLuy').value) || 0;
+  const ngaySPLuy  = parseInt(document.getElementById('dvNgaySPITCLuy').value) || 0;
+
+  if (!tuNgay || !denNgay) { showToast('Vui lòng chọn kỳ báo cáo', true); return; }
+  if (!ngayCL || !ngaySP)  { showToast('Vui lòng nhập số ngày hoạt động', true); return; }
+
+  const tuD   = new Date(tuNgay);   tuD.setHours(0,0,0,0);
+  const denD  = new Date(denNgay);  denD.setHours(23,59,59,999);
+  const luyTuD  = new Date(luyTuNgay);  luyTuD.setHours(0,0,0,0);
+  const luyDenD = new Date(luyDenNgay); luyDenD.setHours(23,59,59,999);
+
+  const fmtVN = s => { if(!s)return''; const [y,m,d]=s.split('-'); return d+'/'+m+'/'+y; };
+  const ngayBC  = fmtVN(tuNgay) + ' - ' + fmtVN(denNgay);
+  const ngayLuy = fmtVN(luyTuNgay) + ' - ' + fmtVN(luyDenNgay);
+
+  // Map cont → cảng từ QLRR
+  const contCangMap = {}, contDonViMap = {};
+  for (const c of qlrrData) {
+    contCangMap[c.cont]  = c.cang;
+    contDonViMap[c.cont] = (c.donViDeNghi || 'KV1').toUpperCase();
+  }
+
+  const DINH_MUC_TONG = 24;
+  const DONVI_TILE = { 'KV1': 0.5, 'QLRR': 0.3, 'KSHQ': 0.2 };
+  const getDonVi = dv => {
+    const d = (dv||'').toUpperCase().trim();
+    if (d.includes('KV1') || d.includes('KV 1')) return 'KV1';
+    if (d.includes('QLRR')) return 'QLRR';
+    if (d.includes('KSHQ')) return 'KSHQ';
+    return 'Khác';
+  };
+
+  const PORTS = ['Cát Lái + Giang Nam', 'SPITC'];
+  const DONVIS = ['KV1', 'QLRR', 'KSHQ', 'Khác'];
+
+  // Hàm tính stats cho 1 cảng + đơn vị trong khoảng thời gian
+  const calcDV = (isSPITC, dvName, fromD, toD, forLuy=false) => {
+    // DS lựa chọn (nhập YC) trong kỳ
+    const lcList = dasoiData.filter(d => {
+      const cang = contCangMap[d.cont] || 'Cát Lái';
+      const dv   = getDonVi(contDonViMap[d.cont] || d.nguoiNhap || '');
+      const matchCang = isSPITC ? cang==='SPITC' : cang!=='SPITC';
+      const matchDV   = dv === dvName;
+      return matchCang && matchDV && d.nhapDate && d.nhapDate >= fromD && d.nhapDate <= toD;
+    });
+    // DS đã soi trong kỳ
+    const soiList = dasoiData.filter(d => {
+      const cang = contCangMap[d.cont] || 'Cát Lái';
+      const dv   = getDonVi(contDonViMap[d.cont] || d.nguoiNhap || '');
+      const matchCang = isSPITC ? cang==='SPITC' : cang!=='SPITC';
+      const matchDV   = dv === dvName;
+      return matchCang && matchDV && d.daSoi && d.soiDate && d.soiDate >= fromD && d.soiDate <= toD;
+    });
+    const nv = soiList.filter(d => d.ketQua && d.ketQua.includes('Có nghi vấn')).length;
+    return { luaChon: lcList.length, daSoi: soiList.length, nghiVan: nv };
+  };
+
+  // Tính tồn cuối = cont nhập trước/trong kỳ chưa soi tính đến cuối kỳ
+  const calcTon = (isSPITC, dvName, denDate) => {
+    return dasoiData.filter(d => {
+      const cang = contCangMap[d.cont] || 'Cát Lái';
+      const dv   = getDonVi(contDonViMap[d.cont] || d.nguoiNhap || '');
+      const matchCang = isSPITC ? cang==='SPITC' : cang!=='SPITC';
+      const matchDV   = dv === dvName;
+      if (!matchCang || !matchDV) return false;
+      if (!d.nhapDate || d.nhapDate > denDate) return false;
+      if (!d.daSoi) return true;
+      return d.soiDate && d.soiDate > denDate;
+    }).length;
+  };
+
+  const wb = XLSX.utils.book_new();
+
+  // ── SHEET 1: TỔNG HỢP ──
+  const s1 = [];
+  s1.push(['CHI CỤC HẢI QUAN KHU VỰC II — HẢI QUAN CỬA KHẨU CẢNG SÀI GÒN KHU VỰC 1']);
+  s1.push([`BÁO CÁO THEO ĐƠN VỊ LỰA CHỌN SOI CHIẾU — Kỳ: ${ngayBC}`]);
+  s1.push([`Lũy kế: ${ngayLuy}`]);
+  s1.push([]);
+  s1.push([
+    'Cảng', 'Đơn vị lựa chọn',
+    `Lựa chọn\n(${ngayBC})`,
+    'Tỷ lệ so với\nĐM (kỳ)',
+    `Lũy kế\nlựa chọn`,
+    'Lũy kế tỷ lệ\n(lũy kế/ĐM×ngày)',
+    `Đã soi\n(kỳ)`,
+    'Nghi vấn\n(kỳ)',
+    'Lũy kế\nđã soi',
+    'Lũy kế\nnghi vấn',
+    'Tồn\ncuối kỳ'
+  ]);
+
+  for (let pi=0; pi<PORTS.length; pi++) {
+    const port    = PORTS[pi];
+    const isSP    = port === 'SPITC';
+    const ngayKy  = isSP ? ngaySP  : ngayCL;
+    const ngayLuyP= isSP ? ngaySPLuy : ngayCLLuy;
+    let tongLC=0, tongDS=0, tongNV=0, tongLuyLC=0, tongLuyDS=0, tongLuyNV=0, tongTon=0;
+
+    for (const dv of DONVIS) {
+      const tile_dm = DONVI_TILE[dv] || 0.05;
+      const dm_ky   = DINH_MUC_TONG * tile_dm * ngayKy;
+      const dm_luy  = DINH_MUC_TONG * tile_dm * ngayLuyP;
+
+      const ky  = calcDV(isSP, dv, tuD,    denD);
+      const luy = calcDV(isSP, dv, luyTuD, luyDenD, true);
+      const ton = calcTon(isSP, dv, denD);
+
+      const tileKy  = dm_ky  > 0 ? (ky.luaChon  / dm_ky  * 100).toFixed(1) + '%' : '0%';
+      const tileLuy = dm_luy > 0 ? (luy.luaChon / dm_luy * 100).toFixed(1) + '%' : '0%';
+
+      s1.push([
+        pi===0 && dv===DONVIS[0] ? port : (dv===DONVIS[0] ? port : ''),
+        dv,
+        ky.luaChon, tileKy,
+        luy.luaChon, tileLuy,
+        ky.daSoi, ky.nghiVan,
+        luy.daSoi, luy.nghiVan,
+        ton
+      ]);
+
+      tongLC    += ky.luaChon;
+      tongDS    += ky.daSoi;
+      tongNV    += ky.nghiVan;
+      tongLuyLC += luy.luaChon;
+      tongLuyDS += luy.daSoi;
+      tongLuyNV += luy.nghiVan;
+      tongTon   += ton;
+    }
+
+    const dm_tong_ky  = DINH_MUC_TONG * ngayKy;
+    const dm_tong_luy = DINH_MUC_TONG * ngayLuyP;
+    s1.push([
+      'Tổng ' + port, '',
+      tongLC, dm_tong_ky > 0 ? (tongLC/dm_tong_ky*100).toFixed(1)+'%' : '0%',
+      tongLuyLC, dm_tong_luy > 0 ? (tongLuyLC/dm_tong_luy*100).toFixed(1)+'%' : '0%',
+      tongDS, tongNV, tongLuyDS, tongLuyNV, tongTon
+    ]);
+  }
+
+  const ws1 = XLSX.utils.aoa_to_sheet(s1);
+  ws1['!cols'] = [22,10,10,12,12,16,10,10,12,12,10].map(w=>({wch:w}));
+  ws1['!merges'] = [
+    {s:{r:0,c:0},e:{r:0,c:10}},
+    {s:{r:1,c:0},e:{r:1,c:10}},
+    {s:{r:2,c:0},e:{r:2,c:10}},
+  ];
+  XLSX.utils.book_append_sheet(wb, ws1, 'tong_hop');
+
+  // ── SHEET 2: DS CONT LỰA CHỌN ──
+  const lcAll = dasoiData.filter(d => d.nhapDate && d.nhapDate >= tuD && d.nhapDate <= denD);
+  const s2 = [
+    ['CHI CỤC HẢI QUAN KHU VỰC II — HẢI QUAN CỬA KHẨU CẢNG SÀI GÒN KHU VỰC 1'],
+    [`DANH SÁCH CONT LỰA CHỌN SOI CHIẾU — Kỳ: ${ngayBC} — Tổng: ${lcAll.length} cont`],
+    [],
+    ['STT', 'Số cont', 'Cảng dỡ hàng (cảng đích)', 'Đơn vị đề nghị', 'Ngày nhập YC'],
+    ...lcAll.map((d,i) => [
+      i+1, d.cont,
+      contCangMap[d.cont] || 'Cát Lái',
+      getDonVi(contDonViMap[d.cont] || d.nguoiNhap || ''),
+      d.ngayNhap || ''
+    ])
+  ];
+  const ws2 = XLSX.utils.aoa_to_sheet(s2);
+  ws2['!cols'] = [5,20,18,12,16].map(w=>({wch:w}));
+  ws2['!merges'] = [{s:{r:0,c:0},e:{r:0,c:4}},{s:{r:1,c:0},e:{r:1,c:4}}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'DS cont lựa chọn');
+
+  // ── SHEET 3: DS CONT ĐÃ SOI ──
+  const soiAll = dasoiData.filter(d => d.daSoi && d.soiDate && d.soiDate >= tuD && d.soiDate <= denD);
+  const s3 = [
+    ['CHI CỤC HẢI QUAN KHU VỰC II — HẢI QUAN CỬA KHẨU CẢNG SÀI GÒN KHU VỰC 1'],
+    [`DANH SÁCH CONT ĐÃ SOI CHIẾU — Kỳ: ${ngayBC} — Tổng: ${soiAll.length} cont`],
+    [],
+    ['STT', 'Số cont', 'Cảng dỡ hàng (cảng đích)', 'Đơn vị đề nghị', 'Nghi vấn/Không nghi vấn', 'Ngày soi'],
+    ...soiAll.map((d,i) => [
+      i+1, d.cont,
+      contCangMap[d.cont] || 'Cát Lái',
+      getDonVi(contDonViMap[d.cont] || d.nguoiNhap || ''),
+      d.ketQua && d.ketQua.includes('Có nghi vấn') ? 'Có nghi vấn' : 'Không nghi vấn',
+      d.ngaySoi || ''
+    ])
+  ];
+  const ws3 = XLSX.utils.aoa_to_sheet(s3);
+  ws3['!cols'] = [5,20,18,12,18,18].map(w=>({wch:w}));
+  ws3['!merges'] = [{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'DS cont đã soi');
+
+  const ngayStr = fmtVN(tuNgay).replace(/\//g,'-');
+  XLSX.writeFile(wb, 'BaoCao_DonVi_' + ngayStr + '.xlsx');
+  document.getElementById('baocaoDonViModal').style.display = 'none';
+  showToast('✅ Đã xuất báo cáo theo đơn vị!');
+}
+</script>
 function showBaoCaoThangModal() {
   const today = new Date();
   const fmt = d => d.toISOString().split('T')[0];
