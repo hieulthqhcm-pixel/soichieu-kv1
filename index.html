@@ -1611,6 +1611,32 @@ function loadQLRR(input) {
         ghiChu:     colCont + 19, // col[20] = Ghi chú
       };
 
+      // Tìm cột Ghi chú theo tên tiêu đề — kiểm tra cả 3 dòng header
+      for (let ri = headerRow; ri <= headerRow + 2; ri++) {
+        const hrow = raw[ri] || [];
+        for (let hi = 0; hi < hrow.length; hi++) {
+          const h = String(hrow[hi] || '').toLowerCase().trim();
+          if (h.includes('ghi chú') || h.includes('ghi chu') || h === 'note' || h === 'notes') {
+            IDX.ghiChu = hi;
+            console.log(`✓ Tìm thấy cột Ghi chú tại row ${ri}, col ${hi}: "${hrow[hi]}"`);
+            break;
+          }
+        }
+      }
+
+      // Fallback: nếu ghiChu vẫn là offset mặc định, thử tìm theo pattern dữ liệu
+      // (dạng số/năm/SCNK như 77/2026/SCNK-HQKV2)
+      const defaultGhiChuIdx = IDX.ghiChu;
+      const patternGhiChu = /\d+\/\d{4}\//;
+      for (let hi = colCont + 15; hi < colCont + 25; hi++) {
+        const sample = dataRows.slice(0, 10).map(r => String(r[hi]||'')).filter(v => patternGhiChu.test(v));
+        if (sample.length > 0) {
+          IDX.ghiChu = hi;
+          console.log(`✓ Tìm thấy cột ghiChu theo pattern tại col ${hi}:`, sample[0]);
+          break;
+        }
+      }
+
       const g = (row, idx) => String(row[idx] || '').trim().replace(/_x000D_/g,'').replace(/\r/g,'');
 
       qlrrData = [];
@@ -1646,9 +1672,10 @@ function loadQLRR(input) {
       
       document.getElementById('zone1').classList.add('loaded');
       document.getElementById('status1').textContent = `✓ ${qlrrData.length} cont`;
-      showToast(`✓ Đã tải ${qlrrData.length} container từ QLRR — đang lưu...`);
+      const ghiChuSample = qlrrData.slice(0,5).map(r=>r.ghiChu).filter(Boolean).join(', ');
+      showToast(`✓ Đã tải ${qlrrData.length} cont — GhiChú mẫu: ${ghiChuSample||'(trống)'}`);
       checkReadyState();
-      saveData().then(() => showToast(`✓ Đã lưu ${qlrrData.length} cont QLRR vào bộ nhớ`));
+      saveData().then(() => showToast(`✓ Đã lưu ${qlrrData.length} cont QLRR`));
     } catch(err) {
       showToast('Lỗi đọc file: ' + err.message, true);
       console.error(err);
