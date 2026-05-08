@@ -3321,10 +3321,11 @@ function exportBaoCaoDonVi() {
     `Lựa chọn\n(${ngayBC})`,
     'Tỷ lệ so với\nĐM (kỳ)',
     `Lũy kế\nlựa chọn`,
-    'Lũy kế tỷ lệ\n(lũy kế/ĐM×ngày)',
+    'Lũy kế tỷ lệ\ncont đã chọn\n(lũy kế/ĐM×ngày)',
     `Đã soi\n(kỳ)`,
     'Nghi vấn\n(kỳ)',
     'Lũy kế\nđã soi',
+    'Lũy kế tỷ lệ\ncont đã soi\n(lũy kế/ĐM×ngày)',
     'Lũy kế\nnghi vấn',
     'Tồn\ncuối kỳ'
   ]);
@@ -3347,6 +3348,7 @@ function exportBaoCaoDonVi() {
 
       const tileKy  = dm_ky  > 0 ? (ky.luaChon  / dm_ky  * 100).toFixed(1) + '%' : '0%';
       const tileLuy = dm_luy > 0 ? (luy.luaChon / dm_luy * 100).toFixed(1) + '%' : '0%';
+      const tileLuySoi = dm_luy > 0 ? (luy.daSoi / dm_luy * 100).toFixed(1) + '%' : '0%';
 
       s1.push([
         pi===0 && dv===DONVIS[0] ? port : (dv===DONVIS[0] ? port : ''),
@@ -3354,7 +3356,8 @@ function exportBaoCaoDonVi() {
         ky.luaChon, tileKy,
         luy.luaChon, tileLuy,
         ky.daSoi, ky.nghiVan,
-        luy.daSoi, luy.nghiVan,
+        luy.daSoi, tileLuySoi,
+        luy.nghiVan,
         ton
       ]);
 
@@ -3369,20 +3372,21 @@ function exportBaoCaoDonVi() {
 
     const dm_tong_ky  = DINH_MUC_TONG * ngayKy;
     const dm_tong_luy = DINH_MUC_TONG * ngayLuyP;
+    const tileTongLuySoi = dm_tong_luy > 0 ? (tongLuyDS/dm_tong_luy*100).toFixed(1)+'%' : '0%';
     s1.push([
       'Tổng ' + port, '',
       tongLC, dm_tong_ky > 0 ? (tongLC/dm_tong_ky*100).toFixed(1)+'%' : '0%',
       tongLuyLC, dm_tong_luy > 0 ? (tongLuyLC/dm_tong_luy*100).toFixed(1)+'%' : '0%',
-      tongDS, tongNV, tongLuyDS, tongLuyNV, tongTon
+      tongDS, tongNV, tongLuyDS, tileTongLuySoi, tongLuyNV, tongTon
     ]);
   }
 
   const ws1 = XLSX.utils.aoa_to_sheet(s1);
-  ws1['!cols'] = [22,10,10,12,12,16,10,10,12,12,10].map(w=>({wch:w}));
+  ws1['!cols'] = [22,10,10,12,12,16,10,10,12,16,12,10].map(w=>({wch:w}));
   ws1['!merges'] = [
-    {s:{r:0,c:0},e:{r:0,c:10}},
-    {s:{r:1,c:0},e:{r:1,c:10}},
-    {s:{r:2,c:0},e:{r:2,c:10}},
+    {s:{r:0,c:0},e:{r:0,c:11}},
+    {s:{r:1,c:0},e:{r:1,c:11}},
+    {s:{r:2,c:0},e:{r:2,c:11}},
   ];
   XLSX.utils.book_append_sheet(wb, ws1, 'tong_hop');
 
