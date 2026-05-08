@@ -1487,7 +1487,8 @@ async function loadFromGitHub() {
         cont,
         cang:        parts[0] || 'Cát Lái',
         hangHoa:     parts[1] || '',
-        donViDeNghi: parts[2] || 'KV1'
+        donViDeNghi: parts[2] || 'KV1',
+        ghiChu:      parts[3] || ''
       };
     });
 
@@ -2165,6 +2166,10 @@ function searchContainer(val) {
         ${d.noiDung ? row('Nội dung KQ:', d.noiDung.substring(0,120), isNV?'var(--accent)':'var(--text-dim)', '📋') : ''}
         <!-- 6. Tên hàng khai báo -->
         ${hangHoa ? row('Tên hàng:', hangHoa.substring(0,150), 'var(--text)', '📦') : ''}
+        <!-- 7. Đơn vị lựa chọn -->
+        ${qlrr.donViDeNghi ? row('Đơn vị LC soi:', qlrr.donViDeNghi, 'var(--gold)', '🏛️') : ''}
+        <!-- 8. Số DS lựa chọn (ghiChu cột U) -->
+        ${qlrr.ghiChu ? row('Số DS lựa chọn:', qlrr.ghiChu, '#a78bfa', '📋') : ''}
       </div>
     </div>`;
   }).join('');
@@ -2328,7 +2333,8 @@ async function syncToGitHub() {
       // Lưu đủ: cang|hangHoa|donViDeNghi
       qlrrMin[r.cont] = (r.cang||'Cát Lái') + '|'
         + (r.hangHoa||'').substring(0,60).replace(/[|]/g,'') + '|'
-        + (r.donViDeNghi||'KV1');
+        + (r.donViDeNghi||'KV1') + '|'
+        + (r.ghiChu||'').substring(0,30).replace(/[|]/g,'');
     });
 
     const dasoiMin = dasoiData.map(r => ([
@@ -2430,7 +2436,9 @@ function exportAppWithData() {
   var qlrrMin = {};
   qlrrData.forEach(function(r){
     if(r.cont) qlrrMin[r.cont] = (r.cang||'').substring(0,10)
-      + '|' + (r.hangHoa||'').substring(0,60).replace(/[|"\\]/g,'');
+      + '|' + (r.hangHoa||'').substring(0,60).replace(/[|"\\]/g,'')
+      + '|' + (r.donViDeNghi||'KV1')
+      + '|' + (r.ghiChu||'').substring(0,30).replace(/[|"\\]/g,'');
   });
   var dasoiMin = [];
   dasoiData.forEach(function(r){
