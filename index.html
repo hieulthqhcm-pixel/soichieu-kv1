@@ -1466,10 +1466,24 @@ async function loadFromGitHub() {
     if (!syncData || !syncData.dasoi || !syncData.qlrr) return;
 
     // So sánh thời gian — chỉ load nếu GitHub mới hơn local
-    const ghTime  = new Date(syncData.updated).getTime();
-    const localTime = parseInt(LS.get('savedDate') ? new Date(LS.get('savedDate')).getTime() : 0);
+    const ghTime = new Date(syncData.updated).getTime();
 
-    if (ghTime <= localTime) return; // Local đã mới hơn → bỏ qua
+    // Lấy savedDate từ IndexedDB (không dùng localStorage)
+    let localSavedDate = null;
+    try { localSavedDate = await dbGet('savedDate'); } catch(e) {}
+    const localTime = localSavedDate ? new Date(localSavedDate).getTime() : 0;
+
+    if (ghTime <= localTime) {
+      console.log('GitHub data cũ hơn local → bỏ qua. GH:', new Date(ghTime).toLocaleString('vi-VN'), '| Local:', new Date(localTime).toLocaleString('vi-VN'));
+      return; // Local đã mới hơn → bỏ qua
+    }
+
+    // Chỉ load nếu local TRỐNG (chưa có dữ liệu)
+    // hoặc GitHub thực sự mới hơn local
+    if (qlrrData.length > 0 && dasoiData.length > 0 && localTime > 0) {
+      console.log('Local đã có dữ liệu và mới hơn GitHub → bỏ qua sync');
+      return;
+    }
 
     // Parse dữ liệu từ GitHub
     const newDasoi = syncData.dasoi.map(r => ({
@@ -1501,9 +1515,9 @@ async function loadFromGitHub() {
       window.__ghBaocao = syncData.baocao;
     }
 
-    // Lưu vào local
+    // Lưu vào local (saveData đã lưu savedDate vào IndexedDB)
     await saveData();
-    LS.set('savedDate', syncData.updated);
+    // Không cần LS.set savedDate nữa vì đã dùng IndexedDB
 
     // Cập nhật UI
     document.getElementById('zone1').classList.add('loaded');
