@@ -3466,8 +3466,200 @@ function exportBaoCaoDonVi() {
 
   const ngayStr = fmtVN(tuNgay).replace(/\//g,'-');
   XLSX.writeFile(wb, 'BaoCao_DonVi_' + ngayStr + '.xlsx');
+
+  // ── XUẤT BIỂU ĐỒ TRÒN HTML ──
+  // Thu thập dữ liệu tổng hợp theo đơn vị (cả 2 cảng gộp lại)
+  const chartData = DONVIS.map(dv => {
+    const tile_dm_cl = DONVI_TILE[dv] || 0.05;
+    const tile_dm_sp = DONVI_TILE[dv] || 0.05;
+    const dm_cl = DINH_MUC_TONG * tile_dm_cl * ngayCL;
+    const dm_sp = DINH_MUC_TONG * tile_dm_sp * ngaySP;
+
+    const kyCL = calcDV(false, dv, tuD, denD);
+    const kySP = calcDV(true,  dv, tuD, denD);
+    const luyCL = calcDV(false, dv, luyTuD, luyDenD, true);
+    const luySP = calcDV(true,  dv, luyTuD, luyDenD, true);
+
+    return {
+      dv,
+      lcKy:  kyCL.luaChon + kySP.luaChon,
+      soiKy: kyCL.daSoi   + kySP.daSoi,
+      lcLuy:  luyCL.luaChon + luySP.luaChon,
+      soiLuy: luyCL.daSoi   + luySP.daSoi,
+    };
+  });
+
+  const totalLcKy  = chartData.reduce((a,d) => a+d.lcKy,  0) || 1;
+  const totalSoiKy = chartData.reduce((a,d) => a+d.soiKy, 0) || 1;
+
+  const COLORS = ['#2ec4b6','#f4a261','#e63946','#8b5cf6'];
+  const COLORS_DARK = ['#1a8c82','#c4763a','#a01a22','#6c3fc5'];
+
+  // Hàm vẽ SVG pie chart
+  function makePie(data, total, title, subtitle) {
+    const cx=180, cy=160, r=120;
+    let angle = -Math.PI/2;
+    let slices = '', legend = '';
+    data.forEach((d, i) => {
+      const pct = d.val / total;
+      const a1 = angle, a2 = angle + pct * 2 * Math.PI;
+      const lx1 = cx + r*Math.cos(a1), ly1 = cy + r*Math.sin(a1);
+      const lx2 = cx + r*Math.cos(a2), ly2 = cy + r*Math.sin(a2);
+      const large = pct > 0.5 ? 1 : 0;
+      const mid = (a1+a2)/2;
+      const lbx = cx + (r*0.65)*Math.cos(mid), lby = cy + (r*0.65)*Math.sin(mid);
+      if (pct > 0.01) {
+        slices += `<path d="M${cx},${cy} L${lx1},${ly1} A${r},${r} 0 ${large},1 ${lx2},${ly2} Z"
+          fill="${COLORS[i]}" stroke="#0a1628" stroke-width="2" opacity="0.92"/>`;
+        if (pct > 0.04) slices += `<text x="${lbx}" y="${lby}" text-anchor="middle" dominant-baseline="middle"
+          font-size="13" font-weight="700" fill="white">${(pct*100).toFixed(1)}%</text>`;
+      }
+      legend += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <div style="width:14px;height:14px;border-radius:3px;background:${COLORS[i]};flex-shrink:0"></div>
+        <div style="font-size:12px;color:#e8f0fe">${d.label}: <b style="color:${COLORS[i]}">${d.val}</b> cont <span style="color:#8899aa">(${(pct*100).toFixed(1)}%)</span></div>
+      </div>`;
+      angle = a2;
+    });
+    return `
+      <div style="background:rgba(17,34,64,0.9);border:1px solid rgba(46,196,182,0.25);border-radius:16px;padding:24px;flex:1;min-width:320px;">
+        <div style="font-size:14px;font-weight:700;color:#2ec4b6;margin-bottom:4px;text-align:center">${title}</div>
+        <div style="font-size:11px;color:#8899aa;text-align:center;margin-bottom:16px">${subtitle}</div>
+        <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;justify-content:center;">
+          <svg viewBox="0 0 360 320" width="260" height="240">
+            ${slices}
+            <circle cx="${cx}" cy="${cy}" r="45" fill="#0a1628"/>
+            <text x="${cx}" y="${cy-8}" text-anchor="middle" font-size="13" fill="#8899aa">Tổng</text>
+            <text x="${cx}" y="${cy+12}" text-anchor="middle" font-size="18" font-weight="700" fill="#2ec4b6">${total}</text>
+          </svg>
+          <div style="min-width:160px">${legend}</div>
+        </div>
+      </div>`;
+  }
+
+  const pie1Data = chartData.map((d,i) => ({label: d.dv, val: d.lcKy}));
+  const pie2Data = chartData.map((d,i) => ({label: d.dv, val: d.soiKy}));
+
+  const chartHtml = `<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Biểu đồ BC Đơn Vị — ${ngayBC}</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',sans-serif; background:#0a1628; color:#e8f0fe; padding:24px; min-height:100vh; }
+  body::before { content:''; position:fixed; inset:0;
+    background-image: linear-gradient(rgba(46,196,182,0.04) 1px, transparent 1px),
+    linear-gradient(90deg,rgba(46,196,182,0.04) 1px,transparent 1px);
+    background-size:40px 40px; pointer-events:none; z-index:0; }
+  .wrap { position:relative; z-index:1; max-width:1100px; margin:0 auto; }
+  h1 { font-size:18px; font-weight:700; color:#2ec4b6; margin-bottom:4px; }
+  .sub { font-size:12px; color:#8899aa; margin-bottom:24px; }
+  .charts { display:flex; gap:20px; flex-wrap:wrap; margin-bottom:28px; }
+  .section-title { font-size:13px; font-weight:700; color:#f4a261; margin:20px 0 12px;
+    padding-bottom:6px; border-bottom:1px solid rgba(244,162,97,0.3); }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  thead th { background:rgba(0,0,0,0.4); color:#2ec4b6; padding:9px 10px;
+    text-align:center; font-size:10px; font-weight:700; letter-spacing:.06em;
+    text-transform:uppercase; border-bottom:1px solid rgba(46,196,182,0.2); }
+  thead th:first-child, thead th:nth-child(2) { text-align:left; }
+  tbody tr { border-bottom:1px solid rgba(255,255,255,0.04); }
+  tbody tr:hover { background:rgba(46,196,182,0.05); }
+  tbody td { padding:9px 10px; text-align:center; }
+  tbody td:first-child, tbody td:nth-child(2) { text-align:left; font-weight:600; }
+  .tot { background:rgba(46,196,182,0.08)!important; font-weight:700; }
+  .teal { color:#2ec4b6; font-weight:700; }
+  .gold { color:#f4a261; font-weight:700; }
+  .red  { color:#e63946; }
+  .dim  { color:#8899aa; font-size:11px; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; }
+  @media(max-width:600px){ .charts { flex-direction:column; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📊 Báo cáo theo Đơn Vị Lựa Chọn Soi Chiếu</h1>
+  <div class="sub">HẢI QUAN CỬA KHẨU CẢNG SÀI GÒN KHU VỰC 1 — Kỳ: ${ngayBC} | Lũy kế: ${ngayLuy}</div>
+
+  <div class="section-title">🍩 Biểu đồ tỷ lệ lựa chọn soi chiếu theo đơn vị (kỳ báo cáo)</div>
+  <div class="charts">
+    ${makePie(pie1Data, totalLcKy, 'Tỷ lệ Lựa Chọn Soi Chiếu', `Kỳ: ${ngayBC} — Tổng: ${totalLcKy} cont`)}
+    ${makePie(pie2Data, totalSoiKy, 'Tỷ lệ Đã Soi Chiếu', `Kỳ: ${ngayBC} — Tổng: ${totalSoiKy} cont`)}
+  </div>
+
+  <div class="section-title">📋 Bảng chi tiết theo đơn vị</div>
+  <div style="background:rgba(17,34,64,0.9);border:1px solid rgba(46,196,182,0.2);border-radius:12px;overflow:hidden;">
+  <table>
+    <thead>
+      <tr>
+        <th>Cảng</th><th>Đơn vị</th>
+        <th>Lựa chọn<br>(kỳ)</th><th>Tỷ lệ ĐM</th>
+        <th>Lũy kế<br>lựa chọn</th><th>Lũy kế tỷ lệ<br>lựa chọn</th>
+        <th>Đã soi<br>(kỳ)</th><th>Nghi vấn</th>
+        <th>Lũy kế<br>đã soi</th><th>Lũy kế tỷ lệ<br>đã soi</th>
+        <th>Tồn cuối</th>
+      </tr>
+    </thead>
+    <tbody>
+    ${PORTS.map(port => {
+      const isSP = port === 'SPITC';
+      const ngayKy = isSP ? ngaySP : ngayCL;
+      const ngayLuyP = isSP ? ngaySPLuy : ngayCLLuy;
+      let rows2 = '', tLC=0, tDS=0, tNV=0, tLLC=0, tLDS=0, tLNV=0, tTon=0;
+      DONVIS.forEach((dv,di) => {
+        const tile_dm = DONVI_TILE[dv]||0.05;
+        const dm_ky = DINH_MUC_TONG*tile_dm*ngayKy;
+        const dm_luy = DINH_MUC_TONG*tile_dm*ngayLuyP;
+        const ky = calcDV(isSP,dv,tuD,denD);
+        const luy = calcDV(isSP,dv,luyTuD,luyDenD,true);
+        const ton = calcTon(isSP,dv,denD);
+        const tKy = dm_ky>0?(ky.luaChon/dm_ky*100).toFixed(1)+'%':'0%';
+        const tLuy = dm_luy>0?(luy.luaChon/dm_luy*100).toFixed(1)+'%':'0%';
+        const tLuySoi = dm_luy>0?(luy.daSoi/dm_luy*100).toFixed(1)+'%':'0%';
+        tLC+=ky.luaChon; tDS+=ky.daSoi; tNV+=ky.nghiVan;
+        tLLC+=luy.luaChon; tLDS+=luy.daSoi; tLNV+=luy.nghiVan; tTon+=ton;
+        rows2 += `<tr>
+          <td style="color:#8899aa;font-size:11px">${di===0?'<b style=color:#e8f0fe>'+port+'</b>':''}</td>
+          <td><span style="color:${COLORS[di]};font-weight:700">${dv}</span></td>
+          <td class="teal">${ky.luaChon}</td><td class="dim">${tKy}</td>
+          <td>${luy.luaChon}</td><td class="dim">${tLuy}</td>
+          <td class="gold">${ky.daSoi}</td><td class="red">${ky.nghiVan}</td>
+          <td>${luy.daSoi}</td><td class="dim">${tLuySoi}</td>
+          <td>${ton}</td>
+        </tr>`;
+      });
+      const dm_tk = DINH_MUC_TONG*ngayKy, dm_tl = DINH_MUC_TONG*ngayLuyP;
+      rows2 += `<tr class="tot">
+        <td colspan="2">Tổng ${port}</td>
+        <td class="teal">${tLC}</td><td class="dim">${dm_tk>0?(tLC/dm_tk*100).toFixed(1)+'%':'0%'}</td>
+        <td>${tLLC}</td><td class="dim">${dm_tl>0?(tLLC/dm_tl*100).toFixed(1)+'%':'0%'}</td>
+        <td class="gold">${tDS}</td><td class="red">${tNV}</td>
+        <td>${tLDS}</td><td class="dim">${dm_tl>0?(tLDS/dm_tl*100).toFixed(1)+'%':'0%'}</td>
+        <td>${tTon}</td>
+      </tr>`;
+      return rows2;
+    }).join('')}
+    </tbody>
+  </table>
+  </div>
+
+  <div style="margin-top:16px;font-size:11px;color:#8899aa;text-align:center;">
+    Định mức phân bổ: KV1=50% | QLRR=30% | KSHQ=20% | Khác=5% × 24 cont/ngày/cảng
+  </div>
+</div>
+</body></html>`;
+
+  setTimeout(() => {
+    const blob2 = new Blob([chartHtml], {type:'text/html;charset=utf-8'});
+    const url2  = URL.createObjectURL(blob2);
+    const a2    = document.createElement('a');
+    a2.href=url2; a2.download='BieuDo_DonVi_'+ngayStr+'.html';
+    a2.style.display='none'; document.body.appendChild(a2); a2.click();
+    setTimeout(()=>{ document.body.removeChild(a2); URL.revokeObjectURL(url2); },2000);
+  }, 800);
+
   document.getElementById('baocaoDonViModal').style.display = 'none';
-  showToast('✅ Đã xuất báo cáo theo đơn vị!');
+  showToast('✅ Đã xuất Excel + Biểu đồ tròn!');
 }
 
 function showBaoCaoThangModal() {
