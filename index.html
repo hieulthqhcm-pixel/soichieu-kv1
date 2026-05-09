@@ -3571,13 +3571,170 @@ function exportBaoCaoDonVi() {
   const pie1Data = chartData.map((d,i) => ({label: d.dv, val: d.lcKy}));
   const pie2Data = chartData.map((d,i) => ({label: d.dv, val: d.soiKy}));
 
-  // Tính sẵn HTML biểu đồ trước khi nhúng vào chartHtml
-  const pie1Html = makePie(pie1Data, totalLcKy,
-    'T\u1ef7 l\u1ec7 L\u1ef1a Ch\u1ecdn Soi Chi\u1ebfu',
-    'K\u1ef3: ' + ngayBC + ' \u2014 T\u1ed5ng: ' + totalLcKy + ' cont');
-  const pie2Html = makePie(pie2Data, totalSoiKy,
-    'T\u1ef7 l\u1ec7 \u0110\u00e3 Soi Chi\u1ebfu',
-    'K\u1ef3: ' + ngayBC + ' \u2014 T\u1ed5ng: ' + totalSoiKy + ' cont');
+  // ── Tính dữ liệu biểu đồ cột: tỷ lệ % so với định mức từng đơn vị ──
+  // Biểu đồ 1: Tỷ lệ lựa chọn ngày / định mức ngày
+  // Biểu đồ 2: Lũy kế tỷ lệ đã soi / (ngày hoạt động × định mức)
+  const barData = DONVIS.map(function(dv, di) {
+    const tile_dm = DONVI_TILE[dv] || 0.05;
+    // Tính cho từng cảng rồi gộp lại
+    const kyCL = calcDV(false, dv, tuD, denD);
+    const kySP = calcDV(true,  dv, tuD, denD);
+    const luyCL = calcDV(false, dv, luyTuD, luyDenD, true);
+    const luySP = calcDV(true,  dv, luyTuD, luyDenD, true);
+
+    // Định mức kỳ (2 cảng × ngày × tỷ lệ phân bổ × 24)
+    const dm_ky_cl = DINH_MUC_TONG * tile_dm * ngayCL;
+    const dm_ky_sp = DINH_MUC_TONG * tile_dm * ngaySP;
+    const dm_luy_cl = DINH_MUC_TONG * tile_dm * ngayCLLuy;
+    const dm_luy_sp = DINH_MUC_TONG * tile_dm * ngaySPLuy;
+
+    const lcKy  = kyCL.luaChon + kySP.luaChon;
+    const dmKy  = dm_ky_cl + dm_ky_sp;
+    const luySoi = luyCL.daSoi + luySP.daSoi;
+    const dmLuy  = dm_luy_cl + dm_luy_sp;
+
+    const tileKy  = dmKy  > 0 ? (lcKy  / dmKy  * 100) : 0;
+    const tileLuy = dmLuy > 0 ? (luySoi / dmLuy * 100) : 0;
+
+    return {
+      dv, color: COLORS[di],
+      lcKy, dmKy: Math.round(dmKy),
+      tileKy:  parseFloat(tileKy.toFixed(1)),
+      luySoi, dmLuy: Math.round(dmLuy),
+      tileLuy: parseFloat(tileLuy.toFixed(1))
+    };
+  });
+
+  // ── Vẽ biểu đồ cột SVG ──
+  function makeBar(barItems, valKey, dmKey, tileKey, title, subtitle, barColor, unit) {
+    const W=520, H=260, padL=50, padR=20, padT=30, padB=70;
+    const chartW = W - padL - padR;
+    const chartH = H - padT - padB;
+    const n = barItems.length;
+    const barW = Math.floor(chartW / n * 0.55);
+    const gap  = Math.floor(chartW / n);
+
+    // Max scale: tối thiểu 100% (đường định mức), tối đa max+20
+    const maxVal = Math.max(100, ...barItems.map(d => d[tileKey])) + 15;
+    const scaleY = v => chartH - (v / maxVal * chartH);
+
+    let bars = '', xLabels = '', yLabels = '', dmLine = '';
+    const dmY = padT + scaleY(100);
+
+    // Đường định mức 100%
+    dmLine = '<line x1="'+padL+'" y1="'+dmY+'" x2="'+(W-padR)+'" y2="'+dmY+'"'
+      + ' stroke="#ffd166" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.8"/>'
+      + '<text x="'+(W-padR-2)+'" y="'+(dmY-5)+'" text-anchor="end" font-size="10" fill="#ffd166">100% ĐM</text>';
+
+    // Lưới ngang
+    [0, 25, 50, 75, 100, 125].forEach(function(v) {
+      if (v > maxVal) return;
+      const y = padT + scaleY(v);
+      yLabels += '<line x1="'+padL+'" y1="'+y+'" x2="'+(W-padR)+'" y2="'+y+'"'
+        + ' stroke="rgba(255,255,255,0.06)" stroke-width="1"/>'
+        + '<text x="'+(padL-6)+'" y="'+(y+4)+'" text-anchor="end" font-size="10" fill="#6b7a8d">'+v+'%</text>';
+    });
+
+    barItems.forEach(function(d, i) {
+      const x = padL + i * gap + (gap - barW) / 2;
+      const pct = d[tileKey];
+      const barH2 = Math.max(2, pct / maxVal * chartH);
+      const y = padT + chartH - barH2;
+      const col = pct >= 100 ? '#06d6a0' : pct >= 70 ? d.color : '#e63946';
+
+      // Cột
+      bars += '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+barH2+'"'
+        + ' fill="'+col+'" rx="4" opacity="0.9"/>';
+
+      // Giá trị % trên đỉnh cột
+      bars += '<text x="'+(x+barW/2)+'" y="'+(y-5)+'" text-anchor="middle"'
+        + ' font-size="12" font-weight="700" fill="'+col+'">'+pct+'%</text>';
+
+      // Số cont thực tế dưới %
+      bars += '<text x="'+(x+barW/2)+'" y="'+(y-18)+'" text-anchor="middle"'
+        + ' font-size="10" fill="#8899aa">'+d[valKey]+'/'+d[dmKey]+'</text>';
+
+      // Label đơn vị dưới trục X
+      xLabels += '<text x="'+(x+barW/2)+'" y="'+(padT+chartH+16)+'" text-anchor="middle"'
+        + ' font-size="13" font-weight="700" fill="'+d.color+'">'+d.dv+'</text>';
+      // Định mức phân bổ
+      const phanBo = ((DONVI_TILE[d.dv]||0.05)*100).toFixed(0);
+      xLabels += '<text x="'+(x+barW/2)+'" y="'+(padT+chartH+30)+'" text-anchor="middle"'
+        + ' font-size="10" fill="#6b7a8d">ĐM '+phanBo+'%</text>';
+      xLabels += '<text x="'+(x+barW/2)+'" y="'+(padT+chartH+43)+'" text-anchor="middle"'
+        + ' font-size="10" fill="#6b7a8d">'+d[dmKey]+' cont</text>';
+    });
+
+    // Trục Y
+    const axis = '<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(padT+chartH)+'"'
+      + ' stroke="rgba(46,196,182,0.3)" stroke-width="1"/>'
+      + '<line x1="'+padL+'" y1="'+(padT+chartH)+'" x2="'+(W-padR)+'" y2="'+(padT+chartH)+'"'
+      + ' stroke="rgba(46,196,182,0.3)" stroke-width="1"/>';
+
+    return '<div style="background:rgba(17,34,64,0.9);border:1px solid rgba(46,196,182,0.25);'
+      + 'border-radius:16px;padding:20px;flex:1;min-width:360px;">'
+      + '<div style="font-size:14px;font-weight:700;color:#2ec4b6;margin-bottom:3px;text-align:center">'+title+'</div>'
+      + '<div style="font-size:11px;color:#8899aa;text-align:center;margin-bottom:14px">'+subtitle+'</div>'
+      + '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:'+W+'px;display:block;margin:0 auto">'
+      + yLabels + dmLine + bars + xLabels + axis
+      + '</svg>'
+      + '<div style="display:flex;gap:16px;justify-content:center;margin-top:10px;flex-wrap:wrap">'
+      + '<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#06d6a0">'
+      + '<div style="width:20px;height:3px;background:#06d6a0;border-radius:2px"></div>Đạt \u226510 0%</div>'
+      + '<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#ffd166">'
+      + '<div style="width:20px;height:2px;background:#ffd166;border-radius:1px;border-top:1px dashed #ffd166"></div>Đường định mức</div>'
+      + '<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:#e63946">'
+      + '<div style="width:20px;height:3px;background:#e63946;border-radius:2px"></div>Dưới 70%</div>'
+      + '</div></div>';
+  }
+
+  // ── Tính barData riêng theo từng cảng ──
+  const barDataCL = DONVIS.map(function(dv, di) {
+    const tile_dm = DONVI_TILE[dv] || 0.05;
+    const kyCL   = calcDV(false, dv, tuD,    denD);
+    const luyCL  = calcDV(false, dv, luyTuD, luyDenD, true);
+    const dm_ky  = DINH_MUC_TONG * tile_dm * ngayCL;
+    const dm_luy = DINH_MUC_TONG * tile_dm * ngayCLLuy;
+    return {
+      dv, color: COLORS[di],
+      lcKy:   kyCL.luaChon,  dmKy:  Math.round(dm_ky),
+      tileKy: dm_ky  > 0 ? parseFloat((kyCL.luaChon  / dm_ky  * 100).toFixed(1)) : 0,
+      luySoi: luyCL.daSoi,   dmLuy: Math.round(dm_luy),
+      tileLuy: dm_luy > 0 ? parseFloat((luyCL.daSoi / dm_luy * 100).toFixed(1)) : 0
+    };
+  });
+
+  const barDataSP = DONVIS.map(function(dv, di) {
+    const tile_dm = DONVI_TILE[dv] || 0.05;
+    const kySP   = calcDV(true, dv, tuD,    denD);
+    const luySP  = calcDV(true, dv, luyTuD, luyDenD, true);
+    const dm_ky  = DINH_MUC_TONG * tile_dm * ngaySP;
+    const dm_luy = DINH_MUC_TONG * tile_dm * ngaySPLuy;
+    return {
+      dv, color: COLORS[di],
+      lcKy:   kySP.luaChon,  dmKy:  Math.round(dm_ky),
+      tileKy: dm_ky  > 0 ? parseFloat((kySP.luaChon  / dm_ky  * 100).toFixed(1)) : 0,
+      luySoi: luySP.daSoi,   dmLuy: Math.round(dm_luy),
+      tileLuy: dm_luy > 0 ? parseFloat((luySP.daSoi / dm_luy * 100).toFixed(1)) : 0
+    };
+  });
+
+  // ── 4 biểu đồ: CL lựa chọn / CL lũy kế / SP lựa chọn / SP lũy kế ──
+  const bar1Html = makeBar(barDataCL, 'lcKy',  'dmKy',  'tileKy',
+    'C\u00e1t L\u00e1i + Giang Nam \u2014 T\u1ef7 l\u1ec7 L\u1ef1a Ch\u1ecdn / \u0110M',
+    'L\u1ef1a ch\u1ecdn th\u1ef1c t\u1ebf / \u0111\u1ecbnh m\u1ee9c ph\u00e2n b\u1ed5 \u2014 K\u1ef3: '+ngayBC, '#2ec4b6', 'cont');
+
+  const bar2Html = makeBar(barDataCL, 'luySoi', 'dmLuy', 'tileLuy',
+    'C\u00e1t L\u00e1i + Giang Nam \u2014 L\u0169y K\u1ebf T\u1ef7 L\u1ec7 \u0110\u00e3 Soi / \u0110M',
+    'L\u0169y k\u1ebf \u0111\u00e3 soi / (\u0111\u1ecbnh m\u1ee9c \u00d7 '+ngayCLLuy+' ng\u00e0y)', '#f4a261', 'cont');
+
+  const bar3Html = makeBar(barDataSP, 'lcKy',  'dmKy',  'tileKy',
+    'SP-ITC \u2014 T\u1ef7 l\u1ec7 L\u1ef1a Ch\u1ecdn / \u0110\u1ecbnh M\u1ee9c',
+    'L\u1ef1a ch\u1ecdn th\u1ef1c t\u1ebf / \u0111\u1ecbnh m\u1ee9c ph\u00e2n b\u1ed5 \u2014 K\u1ef3: '+ngayBC, '#2ec4b6', 'cont');
+
+  const bar4Html = makeBar(barDataSP, 'luySoi', 'dmLuy', 'tileLuy',
+    'SP-ITC \u2014 L\u0169y K\u1ebf T\u1ef7 L\u1ec7 \u0110\u00e3 Soi / \u0110\u1ecbnh M\u1ee9c',
+    'L\u0169y k\u1ebf \u0111\u00e3 soi / (\u0111\u1ecbnh m\u1ee9c \u00d7 '+ngaySPLuy+' ng\u00e0y)', '#f4a261', 'cont');
 
   // Tính sẵn bảng chi tiết
   let tableRowsHtml = '';
@@ -3658,8 +3815,11 @@ function exportBaoCaoDonVi() {
     + '<div class="wrap">'
     + '<h1>&#128202; B\u00e1o c\u00e1o theo \u0110\u01a1n V\u1ecb L\u1ef1a Ch\u1ecdn Soi Chi\u1ebfu</h1>'
     + '<div class="sub">H\u1ea2I QUAN C\u1eecA KH\u1ea8U C\u1ea2NG S\u00c0I G\u00d2N KHU V\u1ef0C 1 \u2014 K\u1ef3: ' + ngayBC + ' | L\u0169y k\u1ebf: ' + ngayLuy + '</div>'
-    + '<div class="section-title">&#127849; Bi\u1ec3u \u0111\u1ed3 t\u1ef7 l\u1ec7 l\u1ef1a ch\u1ecdn v\u00e0 \u0111\u00e3 soi chi\u1ebfu theo \u0111\u01a1n v\u1ecb (k\u1ef3 b\u00e1o c\u00e1o)</div>'
-    + '<div class="charts">' + pie1Html + pie2Html + '</div>'
+    + '<div class="section-title">&#128202; Bi\u1ec3u \u0111\u1ed3 t\u1ef7 l\u1ec7 l\u1ef1a ch\u1ecdn v\u00e0 \u0111\u00e3 soi so v\u1edbi \u0111\u1ecbnh m\u1ee9c \u2014 Ph\u00e2n theo c\u1ea3ng</div>'
+    + '<div style="margin-bottom:10px;font-size:12px;font-weight:700;color:#f4a261;padding:6px 12px;background:rgba(244,162,97,0.1);border-radius:8px;display:inline-block">&#128650; C\u1ea3ng C\u00e1t L\u00e1i + Giang Nam</div>'
+    + '<div class="charts">' + bar1Html + bar2Html + '</div>'
+    + '<div style="margin:10px 0;font-size:12px;font-weight:700;color:#2ec4b6;padding:6px 12px;background:rgba(46,196,182,0.1);border-radius:8px;display:inline-block">&#128650; C\u1ea3ng SP-ITC</div>'
+    + '<div class="charts">' + bar3Html + bar4Html + '</div>'
     + '<div class="section-title">&#128203; B\u1ea3ng chi ti\u1ebft theo \u0111\u01a1n v\u1ecb</div>'
     + '<div style="background:rgba(17,34,64,0.9);border:1px solid rgba(46,196,182,0.2);border-radius:12px;overflow:hidden;">'
     + '<table><thead><tr>'
