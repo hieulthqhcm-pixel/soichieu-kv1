@@ -3539,115 +3539,110 @@ function exportBaoCaoDonVi() {
   const pie1Data = chartData.map((d,i) => ({label: d.dv, val: d.lcKy}));
   const pie2Data = chartData.map((d,i) => ({label: d.dv, val: d.soiKy}));
 
-  const chartHtml = `<!DOCTYPE html>
-<html lang="vi">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Biểu đồ BC Đơn Vị — ${ngayBC}</title>
-<style>
-  * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:'Segoe UI',sans-serif; background:#0a1628; color:#e8f0fe; padding:24px; min-height:100vh; }
-  body::before { content:''; position:fixed; inset:0;
-    background-image: linear-gradient(rgba(46,196,182,0.04) 1px, transparent 1px),
-    linear-gradient(90deg,rgba(46,196,182,0.04) 1px,transparent 1px);
-    background-size:40px 40px; pointer-events:none; z-index:0; }
-  .wrap { position:relative; z-index:1; max-width:1100px; margin:0 auto; }
-  h1 { font-size:18px; font-weight:700; color:#2ec4b6; margin-bottom:4px; }
-  .sub { font-size:12px; color:#8899aa; margin-bottom:24px; }
-  .charts { display:flex; gap:20px; flex-wrap:wrap; margin-bottom:28px; }
-  .section-title { font-size:13px; font-weight:700; color:#f4a261; margin:20px 0 12px;
-    padding-bottom:6px; border-bottom:1px solid rgba(244,162,97,0.3); }
-  table { width:100%; border-collapse:collapse; font-size:12px; }
-  thead th { background:rgba(0,0,0,0.4); color:#2ec4b6; padding:9px 10px;
-    text-align:center; font-size:10px; font-weight:700; letter-spacing:.06em;
-    text-transform:uppercase; border-bottom:1px solid rgba(46,196,182,0.2); }
-  thead th:first-child, thead th:nth-child(2) { text-align:left; }
-  tbody tr { border-bottom:1px solid rgba(255,255,255,0.04); }
-  tbody tr:hover { background:rgba(46,196,182,0.05); }
-  tbody td { padding:9px 10px; text-align:center; }
-  tbody td:first-child, tbody td:nth-child(2) { text-align:left; font-weight:600; }
-  .tot { background:rgba(46,196,182,0.08)!important; font-weight:700; }
-  .teal { color:#2ec4b6; font-weight:700; }
-  .gold { color:#f4a261; font-weight:700; }
-  .red  { color:#e63946; }
-  .dim  { color:#8899aa; font-size:11px; }
-  .badge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:700; }
-  @media(max-width:600px){ .charts { flex-direction:column; } }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <h1>📊 Báo cáo theo Đơn Vị Lựa Chọn Soi Chiếu</h1>
-  <div class="sub">HẢI QUAN CỬA KHẨU CẢNG SÀI GÒN KHU VỰC 1 — Kỳ: ${ngayBC} | Lũy kế: ${ngayLuy}</div>
+  // Tính sẵn HTML biểu đồ trước khi nhúng vào chartHtml
+  const pie1Html = makePie(pie1Data, totalLcKy,
+    'T\u1ef7 l\u1ec7 L\u1ef1a Ch\u1ecdn Soi Chi\u1ebfu',
+    'K\u1ef3: ' + ngayBC + ' \u2014 T\u1ed5ng: ' + totalLcKy + ' cont');
+  const pie2Html = makePie(pie2Data, totalSoiKy,
+    'T\u1ef7 l\u1ec7 \u0110\u00e3 Soi Chi\u1ebfu',
+    'K\u1ef3: ' + ngayBC + ' \u2014 T\u1ed5ng: ' + totalSoiKy + ' cont');
 
-  <div class="section-title">🍩 Biểu đồ tỷ lệ lựa chọn soi chiếu theo đơn vị (kỳ báo cáo)</div>
-  <div class="charts">
-    ${makePie(pie1Data, totalLcKy, 'Tỷ lệ Lựa Chọn Soi Chiếu', `Kỳ: ${ngayBC} — Tổng: ${totalLcKy} cont`)}
-    ${makePie(pie2Data, totalSoiKy, 'Tỷ lệ Đã Soi Chiếu', `Kỳ: ${ngayBC} — Tổng: ${totalSoiKy} cont`)}
-  </div>
+  // Tính sẵn bảng chi tiết
+  let tableRowsHtml = '';
+  PORTS.forEach(function(port) {
+    const isSP = port === 'SPITC';
+    const ngayKy2 = isSP ? ngaySP : ngayCL;
+    const ngayLuyP2 = isSP ? ngaySPLuy : ngayCLLuy;
+    let tLC2=0, tDS2=0, tNV2=0, tLLC2=0, tLDS2=0, tLNV2=0, tTon2=0;
+    DONVIS.forEach(function(dv, di) {
+      const tile_dm2 = DONVI_TILE[dv]||0.05;
+      const dm_ky2 = DINH_MUC_TONG*tile_dm2*ngayKy2;
+      const dm_luy2 = DINH_MUC_TONG*tile_dm2*ngayLuyP2;
+      const ky2 = calcDV(isSP,dv,tuD,denD);
+      const luy2 = calcDV(isSP,dv,luyTuD,luyDenD,true);
+      const ton2 = calcTon(isSP,dv,denD);
+      const tKy2 = dm_ky2>0?(ky2.luaChon/dm_ky2*100).toFixed(1)+'%':'0%';
+      const tLuy2 = dm_luy2>0?(luy2.luaChon/dm_luy2*100).toFixed(1)+'%':'0%';
+      const tLuySoi2 = dm_luy2>0?(luy2.daSoi/dm_luy2*100).toFixed(1)+'%':'0%';
+      tLC2+=ky2.luaChon; tDS2+=ky2.daSoi; tNV2+=ky2.nghiVan;
+      tLLC2+=luy2.luaChon; tLDS2+=luy2.daSoi; tLNV2+=luy2.nghiVan; tTon2+=ton2;
+      tableRowsHtml += '<tr>'
+        + '<td style="color:#8899aa;font-size:11px">' + (di===0?'<b style="color:#e8f0fe">'+port+'</b>':'') + '</td>'
+        + '<td><span style="color:'+COLORS[di]+';font-weight:700">'+dv+'</span></td>'
+        + '<td style="color:#2ec4b6;font-weight:700;text-align:center">'+ky2.luaChon+'</td>'
+        + '<td style="color:#8899aa;font-size:11px;text-align:center">'+tKy2+'</td>'
+        + '<td style="text-align:center">'+luy2.luaChon+'</td>'
+        + '<td style="color:#8899aa;font-size:11px;text-align:center">'+tLuy2+'</td>'
+        + '<td style="color:#f4a261;font-weight:700;text-align:center">'+ky2.daSoi+'</td>'
+        + '<td style="color:#e63946;text-align:center">'+ky2.nghiVan+'</td>'
+        + '<td style="text-align:center">'+luy2.daSoi+'</td>'
+        + '<td style="color:#8899aa;font-size:11px;text-align:center">'+tLuySoi2+'</td>'
+        + '<td style="text-align:center">'+ton2+'</td>'
+        + '</tr>';
+    });
+    const dm_tk2 = DINH_MUC_TONG*ngayKy2, dm_tl2 = DINH_MUC_TONG*ngayLuyP2;
+    tableRowsHtml += '<tr style="background:rgba(46,196,182,0.08);font-weight:700">'
+      + '<td colspan="2">T\u1ed5ng '+port+'</td>'
+      + '<td style="color:#2ec4b6;font-weight:700;text-align:center">'+tLC2+'</td>'
+      + '<td style="color:#8899aa;font-size:11px;text-align:center">'+(dm_tk2>0?(tLC2/dm_tk2*100).toFixed(1)+'%':'0%')+'</td>'
+      + '<td style="text-align:center">'+tLLC2+'</td>'
+      + '<td style="color:#8899aa;font-size:11px;text-align:center">'+(dm_tl2>0?(tLLC2/dm_tl2*100).toFixed(1)+'%':'0%')+'</td>'
+      + '<td style="color:#f4a261;font-weight:700;text-align:center">'+tDS2+'</td>'
+      + '<td style="color:#e63946;text-align:center">'+tNV2+'</td>'
+      + '<td style="text-align:center">'+tLDS2+'</td>'
+      + '<td style="color:#8899aa;font-size:11px;text-align:center">'+(dm_tl2>0?(tLDS2/dm_tl2*100).toFixed(1)+'%':'0%')+'</td>'
+      + '<td style="text-align:center">'+tTon2+'</td>'
+      + '</tr>';
+  });
 
-  <div class="section-title">📋 Bảng chi tiết theo đơn vị</div>
-  <div style="background:rgba(17,34,64,0.9);border:1px solid rgba(46,196,182,0.2);border-radius:12px;overflow:hidden;">
-  <table>
-    <thead>
-      <tr>
-        <th>Cảng</th><th>Đơn vị</th>
-        <th>Lựa chọn<br>(kỳ)</th><th>Tỷ lệ ĐM</th>
-        <th>Lũy kế<br>lựa chọn</th><th>Lũy kế tỷ lệ<br>lựa chọn</th>
-        <th>Đã soi<br>(kỳ)</th><th>Nghi vấn</th>
-        <th>Lũy kế<br>đã soi</th><th>Lũy kế tỷ lệ<br>đã soi</th>
-        <th>Tồn cuối</th>
-      </tr>
-    </thead>
-    <tbody>
-    ${PORTS.map(port => {
-      const isSP = port === 'SPITC';
-      const ngayKy = isSP ? ngaySP : ngayCL;
-      const ngayLuyP = isSP ? ngaySPLuy : ngayCLLuy;
-      let rows2 = '', tLC=0, tDS=0, tNV=0, tLLC=0, tLDS=0, tLNV=0, tTon=0;
-      DONVIS.forEach((dv,di) => {
-        const tile_dm = DONVI_TILE[dv]||0.05;
-        const dm_ky = DINH_MUC_TONG*tile_dm*ngayKy;
-        const dm_luy = DINH_MUC_TONG*tile_dm*ngayLuyP;
-        const ky = calcDV(isSP,dv,tuD,denD);
-        const luy = calcDV(isSP,dv,luyTuD,luyDenD,true);
-        const ton = calcTon(isSP,dv,denD);
-        const tKy = dm_ky>0?(ky.luaChon/dm_ky*100).toFixed(1)+'%':'0%';
-        const tLuy = dm_luy>0?(luy.luaChon/dm_luy*100).toFixed(1)+'%':'0%';
-        const tLuySoi = dm_luy>0?(luy.daSoi/dm_luy*100).toFixed(1)+'%':'0%';
-        tLC+=ky.luaChon; tDS+=ky.daSoi; tNV+=ky.nghiVan;
-        tLLC+=luy.luaChon; tLDS+=luy.daSoi; tLNV+=luy.nghiVan; tTon+=ton;
-        rows2 += `<tr>
-          <td style="color:#8899aa;font-size:11px">${di===0?'<b style=color:#e8f0fe>'+port+'</b>':''}</td>
-          <td><span style="color:${COLORS[di]};font-weight:700">${dv}</span></td>
-          <td class="teal">${ky.luaChon}</td><td class="dim">${tKy}</td>
-          <td>${luy.luaChon}</td><td class="dim">${tLuy}</td>
-          <td class="gold">${ky.daSoi}</td><td class="red">${ky.nghiVan}</td>
-          <td>${luy.daSoi}</td><td class="dim">${tLuySoi}</td>
-          <td>${ton}</td>
-        </tr>`;
-      });
-      const dm_tk = DINH_MUC_TONG*ngayKy, dm_tl = DINH_MUC_TONG*ngayLuyP;
-      rows2 += `<tr class="tot">
-        <td colspan="2">Tổng ${port}</td>
-        <td class="teal">${tLC}</td><td class="dim">${dm_tk>0?(tLC/dm_tk*100).toFixed(1)+'%':'0%'}</td>
-        <td>${tLLC}</td><td class="dim">${dm_tl>0?(tLLC/dm_tl*100).toFixed(1)+'%':'0%'}</td>
-        <td class="gold">${tDS}</td><td class="red">${tNV}</td>
-        <td>${tLDS}</td><td class="dim">${dm_tl>0?(tLDS/dm_tl*100).toFixed(1)+'%':'0%'}</td>
-        <td>${tTon}</td>
-      </tr>`;
-      return rows2;
-    }).join('')}
-    </tbody>
-  </table>
-  </div>
-
-  <div style="margin-top:16px;font-size:11px;color:#8899aa;text-align:center;">
-    Định mức phân bổ: KV1=50% | QLRR=30% | KSHQ=20% | Khác=5% × 24 cont/ngày/cảng
-  </div>
-</div>
-</body></html>`;
+  const chartHtml = '<!DOCTYPE html>'
+    + '<html lang="vi"><head>'
+    + '<meta charset="UTF-8">'
+    + '<meta name="viewport" content="width=device-width,initial-scale=1">'
+    + '<title>Bi\u1ec3u \u0111\u1ed3 BC \u0110\u01a1n V\u1ecb \u2014 ' + ngayBC + '</title>'
+    + '<style>'
+    + '* { box-sizing:border-box; margin:0; padding:0; }'
+    + 'body { font-family:"Segoe UI",sans-serif; background:#0a1628; color:#e8f0fe; padding:24px; min-height:100vh; }'
+    + 'body::before { content:""; position:fixed; inset:0;'
+    + '  background-image: linear-gradient(rgba(46,196,182,0.04) 1px, transparent 1px),'
+    + '  linear-gradient(90deg,rgba(46,196,182,0.04) 1px,transparent 1px);'
+    + '  background-size:40px 40px; pointer-events:none; z-index:0; }'
+    + '.wrap { position:relative; z-index:1; max-width:1100px; margin:0 auto; }'
+    + 'h1 { font-size:18px; font-weight:700; color:#2ec4b6; margin-bottom:4px; }'
+    + '.sub { font-size:12px; color:#8899aa; margin-bottom:24px; }'
+    + '.charts { display:flex; gap:20px; flex-wrap:wrap; margin-bottom:28px; }'
+    + '.section-title { font-size:13px; font-weight:700; color:#f4a261; margin:20px 0 12px;'
+    + '  padding-bottom:6px; border-bottom:1px solid rgba(244,162,97,0.3); }'
+    + 'table { width:100%; border-collapse:collapse; font-size:12px; }'
+    + 'thead th { background:rgba(0,0,0,0.4); color:#2ec4b6; padding:9px 10px;'
+    + '  text-align:center; font-size:10px; font-weight:700; letter-spacing:.06em;'
+    + '  text-transform:uppercase; border-bottom:1px solid rgba(46,196,182,0.2); }'
+    + 'thead th:first-child, thead th:nth-child(2) { text-align:left; }'
+    + 'tbody tr { border-bottom:1px solid rgba(255,255,255,0.04); }'
+    + 'tbody tr:hover { background:rgba(46,196,182,0.05); }'
+    + 'tbody td { padding:9px 10px; }'
+    + '@media(max-width:600px){ .charts { flex-direction:column; } }'
+    + '</style></head><body>'
+    + '<div class="wrap">'
+    + '<h1>&#128202; B\u00e1o c\u00e1o theo \u0110\u01a1n V\u1ecb L\u1ef1a Ch\u1ecdn Soi Chi\u1ebfu</h1>'
+    + '<div class="sub">H\u1ea2I QUAN C\u1eecA KH\u1ea8U C\u1ea2NG S\u00c0I G\u00d2N KHU V\u1ef0C 1 \u2014 K\u1ef3: ' + ngayBC + ' | L\u0169y k\u1ebf: ' + ngayLuy + '</div>'
+    + '<div class="section-title">&#127849; Bi\u1ec3u \u0111\u1ed3 t\u1ef7 l\u1ec7 l\u1ef1a ch\u1ecdn v\u00e0 \u0111\u00e3 soi chi\u1ebfu theo \u0111\u01a1n v\u1ecb (k\u1ef3 b\u00e1o c\u00e1o)</div>'
+    + '<div class="charts">' + pie1Html + pie2Html + '</div>'
+    + '<div class="section-title">&#128203; B\u1ea3ng chi ti\u1ebft theo \u0111\u01a1n v\u1ecb</div>'
+    + '<div style="background:rgba(17,34,64,0.9);border:1px solid rgba(46,196,182,0.2);border-radius:12px;overflow:hidden;">'
+    + '<table><thead><tr>'
+    + '<th>C\u1ea3ng</th><th>\u0110\u01a1n v\u1ecb</th>'
+    + '<th>L\u1ef1a ch\u1ecdn (k\u1ef3)</th><th>T\u1ef7 l\u1ec7 \u0110M</th>'
+    + '<th>L\u0169y k\u1ebf l\u1ef1a ch\u1ecdn</th><th>L\u0169y k\u1ebf t\u1ef7 l\u1ec7 l\u1ef1a ch\u1ecdn</th>'
+    + '<th>\u0110\u00e3 soi (k\u1ef3)</th><th>Nghi v\u1ea5n</th>'
+    + '<th>L\u0169y k\u1ebf \u0111\u00e3 soi</th><th>L\u0169y k\u1ebf t\u1ef7 l\u1ec7 \u0111\u00e3 soi</th>'
+    + '<th>T\u1ed3n cu\u1ed1i</th>'
+    + '</tr></thead><tbody>'
+    + tableRowsHtml
+    + '</tbody></table></div>'
+    + '<div style="margin-top:16px;font-size:11px;color:#8899aa;text-align:center;">'
+    + '\u0110\u1ecbnh m\u1ee9c ph\u00e2n b\u1ed5: KV1=50% | QLRR=30% | KSHQ=20% | Kh\u00e1c=5% \u00d7 24 cont/ng\u00e0y/c\u1ea3ng'
+    + '</div></div></body></html>';
 
   setTimeout(() => {
     const blob2 = new Blob([chartHtml], {type:'text/html;charset=utf-8'});
