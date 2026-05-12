@@ -1807,22 +1807,32 @@ function normalizeCang(str) {
 
 // Chuẩn hóa tên đơn vị — nhận cả tên viết tắt lẫn tên đầy đủ từ 12/05/2026
 function normalizeDonVi(dv) {
-  const d = (dv||'').toUpperCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  // Tên viết tắt cũ
-  if (d === 'KV1' || d.includes('KV1') || d.includes('KV 1')) return 'KV1';
-  if (d === 'QLRR' || d.includes('QLRR')) return 'QLRR';
-  if (d === 'KSHQ' || d.includes('KSHQ')) return 'KSHQ';
-  // Tên đầy đủ từ 12/05/2026
-  // KV1 = "Hải quan cửa khẩu cảng Sài Gòn khu vực 1"
-  if (d.includes('KHU VUC 1') || d.includes('KHU VUC I') ||
-      (d.includes('CANG') && d.includes('KHU VUC'))) return 'KV1';
-  // QLRR = "Phòng Quản lý rủi ro"
-  if (d.includes('QUAN LY RUI RO') || d.includes('PHONG QUAN LY')) return 'QLRR';
-  // KSHQ = "Đội Kiểm soát hải quan"
-  if (d.includes('KIEM SOAT HAI QUAN') || d.includes('DOI KIEM SOAT') ||
-      d.includes('KIEM SOAT')) return 'KSHQ';
-  return dv || 'KV1'; // giữ nguyên nếu không nhận ra
+  const raw = (dv||'').trim();
+  const d = raw.toUpperCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'') // bỏ dấu
+    .replace(/\s+/g,' ');                             // chuẩn hóa khoảng trắng
+
+  // ── KSHQ — Đội Kiểm soát hải quan ──
+  // Dạng: KSHQ, ĐKSHQ, Đội KSHQ, Đội Kiểm soát hải quan
+  if (d === 'KSHQ' || d === 'DKSHQ' || d === 'DOI KSHQ' ||
+      d.startsWith('DOI KSHQ') || d.includes('KSHQ') ||
+      d.includes('KIEM SOAT HAI QUAN') || d.includes('KIEM SOAT')) return 'KSHQ';
+
+  // ── QLRR — Phòng Quản lý rủi ro ──
+  // Dạng: QLRR, P.QLRR, Phòng QLRR, PhòngQLRR, Phòng Quản lý rủi ro
+  if (d === 'QLRR' || d === 'P.QLRR' || d === 'PHONGQLRR' ||
+      d.startsWith('P QLRR') || d.startsWith('PHONG QLRR') ||
+      d.includes('QUAN LY RUI RO')) return 'QLRR';
+
+  // ── KV1 — Hải quan cửa khẩu cảng Sài Gòn khu vực 1 ──
+  // Dạng: KV1, Hải quan cửa khẩu cảng Sài Gòn KV1,
+  //        Hải Quan Cửa Khẩu Cảng Sài Gòn Khu Vực 1, ...
+  if (d === 'KV1' || d === 'KV 1' ||
+      d.includes('KHU VUC 1') || d.includes('KHU VUC I') ||
+      (d.includes('CANG') && d.includes('KV1')) ||
+      d.includes('SAI GON KV') || d.includes('SAI GON KHU VUC')) return 'KV1';
+
+  return 'Khác';
 }
 
 function checkReadyState() {
