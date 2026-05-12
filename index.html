@@ -1666,7 +1666,7 @@ function loadQLRR(input) {
           cont:        cont.toUpperCase(),
           cang:        normalizeCang(cang),
           hangHoa:     moTa.substring(0, 300),
-          donViDeNghi: g(row, IDX.donVi) || 'KV1',
+          donViDeNghi: normalizeDonVi(g(row, IDX.donVi)) || 'KV1',
           soSeal:      g(row, IDX.seal),
           tenTau:      g(row, IDX.ptvt),
           ngayCap:     g(row, IDX.ngayCap),
@@ -1803,6 +1803,26 @@ function normalizeCang(str) {
   if (/SPITC|SP-ITC|SP\s+ITC/.test(s)) return 'SPITC';
   if (s.includes('GIANG NAM')) return 'Giang Nam';
   return 'Cát Lái';
+}
+
+// Chuẩn hóa tên đơn vị — nhận cả tên viết tắt lẫn tên đầy đủ từ 12/05/2026
+function normalizeDonVi(dv) {
+  const d = (dv||'').toUpperCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  // Tên viết tắt cũ
+  if (d === 'KV1' || d.includes('KV1') || d.includes('KV 1')) return 'KV1';
+  if (d === 'QLRR' || d.includes('QLRR')) return 'QLRR';
+  if (d === 'KSHQ' || d.includes('KSHQ')) return 'KSHQ';
+  // Tên đầy đủ từ 12/05/2026
+  // KV1 = "Hải quan cửa khẩu cảng Sài Gòn khu vực 1"
+  if (d.includes('KHU VUC 1') || d.includes('KHU VUC I') ||
+      (d.includes('CANG') && d.includes('KHU VUC'))) return 'KV1';
+  // QLRR = "Phòng Quản lý rủi ro"
+  if (d.includes('QUAN LY RUI RO') || d.includes('PHONG QUAN LY')) return 'QLRR';
+  // KSHQ = "Đội Kiểm soát hải quan"
+  if (d.includes('KIEM SOAT HAI QUAN') || d.includes('DOI KIEM SOAT') ||
+      d.includes('KIEM SOAT')) return 'KSHQ';
+  return dv || 'KV1'; // giữ nguyên nếu không nhận ra
 }
 
 function checkReadyState() {
@@ -3310,13 +3330,7 @@ function exportBaoCaoDonVi() {
 
   const DINH_MUC_TONG = 24;
   const DONVI_TILE = { 'KV1': 0.5, 'QLRR': 0.3, 'KSHQ': 0.2 };
-  const getDonVi = dv => {
-    const d = (dv||'').toUpperCase().trim();
-    if (d.includes('KV1') || d.includes('KV 1')) return 'KV1';
-    if (d.includes('QLRR')) return 'QLRR';
-    if (d.includes('KSHQ')) return 'KSHQ';
-    return 'Khác';
-  };
+  const getDonVi = dv => normalizeDonVi(dv);
 
   const PORTS = ['Cát Lái + Giang Nam', 'SPITC'];
   const DONVIS = ['KV1', 'QLRR', 'KSHQ', 'Khác'];
