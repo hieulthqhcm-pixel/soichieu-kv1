@@ -4109,7 +4109,7 @@ function exportBaoCaoThang() {
 <tr>
   ${tdH('STT','','3')} ${tdH('Địa điểm lắp đặt','','3')} ${tdH('Loại máy soi<br>(Mã máy soi)','','3')}
   ${tdH('Kết quả kiểm tra qua soi chiếu<br>(' + viKy + ')','5','')}
-  ${tdH('Kết quả kiểm tra qua soi chiếu lũy kế<br>(' + viLuy + ')','4','')}
+  ${tdH('Kết quả kiểm tra qua soi chiếu lũy kế<br>(' + viLuy + ')','5','')}
 </tr>
 <tr>
   ${tdH('Tổng container<br>soi chiếu','','2')}
@@ -4120,6 +4120,7 @@ function exportBaoCaoThang() {
   ${tdH('Tổng container<br>soi chiếu','','2')}
   ${tdH('Tổng container<br>nghi vấn','','2')}
   ${tdH('Tổng container<br>vi phạm','','2')}
+  ${tdH('Tỷ lệ đạt<br>(%)','','2')}
   ${tdH('Số ngày<br>hoạt động (*)','','2','#FFF2CC')}
 </tr>
 <tr style="background:#DDEBF7">
@@ -4127,32 +4128,32 @@ function exportBaoCaoThang() {
   ${tdH('(4)','','','')} ${tdH('(5)','','','')} ${tdH('(6)','','','')}
   ${tdH('(7)','','','')} ${tdH('(7a)','','','#FFF2CC')}
   ${tdH('(8)','','','')} ${tdH('(9)','','','')} ${tdH('(10)','','','')}
-  ${tdH('(10a)','','','#FFF2CC')}
+  ${tdH('(10b)','','','')} ${tdH('(10a)','','','#FFF2CC')}
 </tr>
 <tr>
   ${td('01')} ${td('KV1 (Cát Lái)','left')} ${td('Di động (HCVM3528L)','left')}
   ${td('0')} ${td('0')} ${td('0')} ${td('Máy hỏng')} ${td('','center',false,'#FFF2CC')}
-  ${td('0')} ${td('0')} ${td('0')} ${td('','center',false,'#FFF2CC')}
+  ${td('0')} ${td('0')} ${td('0')} ${td('Máy hỏng')} ${td('','center',false,'#FFF2CC')}
 </tr>
 <tr>
   ${td('02')} ${td('KV1 (Cát Lái)','left')} ${td('Dạng cổng (HCVP 6030)','left')}
   ${td('0')} ${td('0')} ${td('0')} ${td('Máy hỏng')} ${td('','center',false,'#FFF2CC')}
-  ${td('0')} ${td('0')} ${td('0')} ${td('','center',false,'#FFF2CC')}
+  ${td('0')} ${td('0')} ${td('0')} ${td('Máy hỏng')} ${td('','center',false,'#FFF2CC')}
 </tr>
 <tr>
   ${td('03')} ${td('KV1 (Cát Lái)','left')} ${td('Cố định CX-G6 L3 Gatry','left')}
   ${td('0')} ${td('0')} ${td('0')} ${td('Máy hỏng')} ${td('','center',false,'#FFF2CC')}
-  ${td('0')} ${td('0')} ${td('0')} ${td('','center',false,'#FFF2CC')}
+  ${td('0')} ${td('0')} ${td('0')} ${td('Máy hỏng')} ${td('','center',false,'#FFF2CC')}
 </tr>
 <tr>
   ${td('04')} ${td('Cảng SP-ITC','left')} ${td('Di động (Eagle M60-369)','left')}
   ${td(m04Ky.tong)} ${td(m04Ky.nghiVan)} ${td(m04Ky.viPham)} ${td(tile04)} ${td(ngayHD04Ky,'center',true,'#FFF2CC')}
-  ${td(m04Luy.tong)} ${td(m04Luy.nghiVan)} ${td(m04Luy.viPham)} ${td(ngayHD04Luy,'center',true,'#FFF2CC')}
+  ${td(m04Luy.tong)} ${td(m04Luy.nghiVan)} ${td(m04Luy.viPham)} ${td(tile04Luy)} ${td(ngayHD04Luy,'center',true,'#FFF2CC')}
 </tr>
 <tr>
   ${td('05')} ${td('Cát Lái + Giang Nam','left')} ${td('Di động (Eagle M60-366)','left')}
   ${td(m05Ky.tong)} ${td(m05Ky.nghiVan)} ${td(m05Ky.viPham)} ${td(tile05)} ${td(ngayHD05Ky,'center',true,'#FFF2CC')}
-  ${td(m05Luy.tong)} ${td(m05Luy.nghiVan)} ${td(m05Luy.viPham)} ${td(ngayHD05Luy,'center',true,'#FFF2CC')}
+  ${td(m05Luy.tong)} ${td(m05Luy.nghiVan)} ${td(m05Luy.viPham)} ${td(tile05Luy)} ${td(ngayHD05Luy,'center',true,'#FFF2CC')}
 </tr>
 <tr style="background:#BDD7EE;font-weight:bold">
   <td colspan="3" style="border:1px solid #000;padding:4px 6px;text-align:center;font-weight:bold;background:#BDD7EE">Tổng</td>
@@ -4164,6 +4165,7 @@ function exportBaoCaoThang() {
   ${td(m04Luy.tong+m05Luy.tong,'center',true,'#BDD7EE')}
   ${td(m04Luy.nghiVan+m05Luy.nghiVan,'center',true,'#BDD7EE')}
   ${td('0','center',true,'#BDD7EE')}
+  ${td(tileTotalLuy,'center',true,'#BDD7EE')}
   ${td((ngayHD04Luy&&ngayHD05Luy)?(parseInt(ngayHD04Luy)+parseInt(ngayHD05Luy)):'' ,'center',true,'#FFF2CC')}
 </tr>
 </table>
