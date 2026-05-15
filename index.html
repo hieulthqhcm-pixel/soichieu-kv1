@@ -1095,7 +1095,7 @@
     </div>
     <div style="display:flex;flex-direction:column;gap:14px;">
       <div style="background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.3);border-radius:8px;padding:12px;font-size:12px;color:#93c5fd;">
-        📝 File Word sẽ tạo theo mẫu báo cáo tháng. Cột <b>Số ngày hoạt động</b> để trống — tự điền tay.
+        📝 File Word tạo theo mẫu báo cáo tháng. Nhập số ngày hoạt động để tính tỷ lệ tự động.
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -1128,6 +1128,33 @@
         <div>
           <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">📅 Ngày lập báo cáo</label>
           <input type="date" id="bcThangNgayLap" style="width:100%;background:var(--navy);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-size:12px;outline:none;font-family:'JetBrains Mono',monospace;">
+        </div>
+      </div>
+
+      <!-- SỐ NGÀY HOẠT ĐỘNG -->
+      <div style="background:rgba(255,214,102,0.08);border:1px solid rgba(255,214,102,0.3);border-radius:8px;padding:12px;">
+        <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:10px;">🏢 Số ngày hoạt động (ngày làm việc thực tế)</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">Cát Lái + Giang Nam — kỳ BC</label>
+            <input type="number" id="bcThangNgayCLKy" min="1" max="31" placeholder="VD: 22"
+              style="width:100%;background:var(--navy);border:1px solid rgba(255,214,102,0.4);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;outline:none;font-family:'JetBrains Mono',monospace;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">SP-ITC — kỳ BC</label>
+            <input type="number" id="bcThangNgaySPKy" min="1" max="31" placeholder="VD: 22"
+              style="width:100%;background:var(--navy);border:1px solid rgba(255,214,102,0.4);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;outline:none;font-family:'JetBrains Mono',monospace;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">Cát Lái + Giang Nam — lũy kế</label>
+            <input type="number" id="bcThangNgayCLLuy" min="1" max="366" placeholder="VD: 85"
+              style="width:100%;background:var(--navy);border:1px solid rgba(255,214,102,0.4);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;outline:none;font-family:'JetBrains Mono',monospace;">
+          </div>
+          <div>
+            <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px;">SP-ITC — lũy kế</label>
+            <input type="number" id="bcThangNgaySPLuy" min="1" max="366" placeholder="VD: 85"
+              style="width:100%;background:var(--navy);border:1px solid rgba(255,214,102,0.4);color:var(--text);padding:8px 10px;border-radius:6px;font-size:13px;outline:none;font-family:'JetBrains Mono',monospace;">
+          </div>
         </div>
       </div>
 
@@ -3890,10 +3917,8 @@ function exportBaoCaoDonVi() {
 function showBaoCaoThangModal() {
   const today = new Date();
   const fmt = d => d.toISOString().split('T')[0];
-  // Mặc định: kỳ báo cáo = tháng hiện tại
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-  const lastDay  = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  // Lũy kế từ đầu năm
+  const firstDay  = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastDay   = new Date(today.getFullYear(), today.getMonth() + 1, 0);
   const firstYear = new Date(today.getFullYear(), 0, 1);
 
   document.getElementById('bcThangTuNgay').value    = fmt(firstDay);
@@ -3902,6 +3927,18 @@ function showBaoCaoThangModal() {
   document.getElementById('bcThangLuyDenNgay').value= fmt(lastDay);
   document.getElementById('bcThangThang').value     = `${today.getMonth()+1}/${today.getFullYear()}`;
   document.getElementById('bcThangNgayLap').value   = fmt(today);
+
+  // Tự tính gợi ý ngày làm việc
+  let wdMonth = 0, wdYear = 0;
+  for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate()+1))
+    if (d.getDay()!==0 && d.getDay()!==6) wdMonth++;
+  for (let d = new Date(firstYear); d <= today; d.setDate(d.getDate()+1))
+    if (d.getDay()!==0 && d.getDay()!==6) wdYear++;
+
+  document.getElementById('bcThangNgayCLKy').value  = wdMonth;
+  document.getElementById('bcThangNgaySPKy').value  = wdMonth;
+  document.getElementById('bcThangNgayCLLuy').value = wdYear;
+  document.getElementById('bcThangNgaySPLuy').value = wdYear;
 
   document.getElementById('baocaoThangModal').style.display = '';
 }
@@ -3914,6 +3951,12 @@ function exportBaoCaoThang() {
   const luyDenNgay= document.getElementById('bcThangLuyDenNgay').value;
   const thang     = document.getElementById('bcThangThang').value || '___/____';
   const ngayLap   = document.getElementById('bcThangNgayLap').value;
+
+  // Số ngày hoạt động
+  const ngayCLKy  = parseInt(document.getElementById('bcThangNgayCLKy').value)  || 0;
+  const ngaySPKy  = parseInt(document.getElementById('bcThangNgaySPKy').value)  || 0;
+  const ngayCLLuy = parseInt(document.getElementById('bcThangNgayCLLuy').value) || 0;
+  const ngaySPLuy = parseInt(document.getElementById('bcThangNgaySPLuy').value) || 0;
 
   if (!tuNgay || !denNgay) { showToast('Vui lòng chọn kỳ báo cáo', true); return; }
 
@@ -3928,8 +3971,8 @@ function exportBaoCaoThang() {
     return `ngày ${d} tháng ${m} năm ${y}`;
   };
 
-  const kyBC   = `${fmtVN(tuNgay)} đến ngày ${fmtVN(denNgay)}`;
-  const kyLuy  = `${fmtVN(luyTuNgay)} đến ngày ${fmtVN(luyDenNgay)}`;
+  const kyBC  = `${fmtVN(tuNgay)} đến ngày ${fmtVN(denNgay)}`;
+  const kyLuy = `${fmtVN(luyTuNgay)} đến ngày ${fmtVN(luyDenNgay)}`;
 
   // Tính số liệu từ dữ liệu hiện có
   const tuD  = new Date(tuNgay);  tuD.setHours(0,0,0,0);
@@ -3963,12 +4006,30 @@ function exportBaoCaoThang() {
   const m05Luy = calcStats(isCatLai, luyTuD, luyDenD);
 
   const dinhMuc = 24;
-  const tileM04 = m04Ky.tong > 0 ? (m04Ky.tong / dinhMuc * 100 / Math.max(1, Math.round((denD-tuD)/86400000)+1) * 30).toFixed(1) + '%' : '0%';
-  // Tỷ lệ = tổng soi / (định mức * số ngày làm việc)
+  // Tỷ lệ kỳ: dùng số ngày hoạt động nhập tay (nếu có), fallback tính theo lịch
   const soNgayKy = Math.round((denD - tuD) / 86400000) + 1;
-  const tile04 = ((m04Ky.tong / (dinhMuc * soNgayKy)) * 100).toFixed(1) + '%';
-  const tile05 = ((m05Ky.tong / (dinhMuc * soNgayKy)) * 100).toFixed(1) + '%';
-  const tileTotal = (((m04Ky.tong + m05Ky.tong) / (dinhMuc * 2 * soNgayKy)) * 100).toFixed(1) + '%';
+  const tile04 = ngaySPKy  > 0
+    ? ((m04Ky.tong / (dinhMuc * ngaySPKy))  * 100).toFixed(1) + '%'
+    : ((m04Ky.tong / (dinhMuc * soNgayKy))  * 100).toFixed(1) + '%';
+  const tile05 = ngayCLKy  > 0
+    ? ((m05Ky.tong / (dinhMuc * ngayCLKy))  * 100).toFixed(1) + '%'
+    : ((m05Ky.tong / (dinhMuc * soNgayKy))  * 100).toFixed(1) + '%';
+  // Tỷ lệ lũy kế: dùng số ngày lũy kế nhập tay
+  const tile04Luy = ngaySPLuy > 0
+    ? ((m04Luy.tong / (dinhMuc * ngaySPLuy)) * 100).toFixed(1) + '%' : '—';
+  const tile05Luy = ngayCLLuy > 0
+    ? ((m05Luy.tong / (dinhMuc * ngayCLLuy)) * 100).toFixed(1) + '%' : '—';
+  const tileTotal = (ngaySPKy > 0 && ngayCLKy > 0)
+    ? (((m04Ky.tong + m05Ky.tong) / (dinhMuc * (ngaySPKy + ngayCLKy))) * 100).toFixed(1) + '%'
+    : (((m04Ky.tong + m05Ky.tong) / (dinhMuc * 2 * soNgayKy)) * 100).toFixed(1) + '%';
+  const tileTotalLuy = (ngaySPLuy > 0 && ngayCLLuy > 0)
+    ? (((m04Luy.tong + m05Luy.tong) / (dinhMuc * (ngaySPLuy + ngayCLLuy))) * 100).toFixed(1) + '%' : '—';
+
+  // Hiển thị số ngày hoạt động trong bảng (nếu có nhập)
+  const ngayHD04Ky  = ngaySPKy  > 0 ? ngaySPKy  : '';
+  const ngayHD05Ky  = ngayCLKy  > 0 ? ngayCLKy  : '';
+  const ngayHD04Luy = ngaySPLuy > 0 ? ngaySPLuy : '';
+  const ngayHD05Luy = ngayCLLuy > 0 ? ngayCLLuy : '';
 
   // Tạo nội dung docx bằng HTML → tải về dạng .html giả Word (Office HTML)
   // Vì không có thư viện docx trong browser, dùng Office HTML format
@@ -4085,13 +4146,13 @@ function exportBaoCaoThang() {
 </tr>
 <tr>
   ${td('04')} ${td('Cảng SP-ITC','left')} ${td('Di động (Eagle M60-369)','left')}
-  ${td(m04Ky.tong)} ${td(m04Ky.nghiVan)} ${td(m04Ky.viPham)} ${td(tile04)} ${td('','center',false,'#FFF2CC')}
-  ${td(m04Luy.tong)} ${td(m04Luy.nghiVan)} ${td(m04Luy.viPham)} ${td('','center',false,'#FFF2CC')}
+  ${td(m04Ky.tong)} ${td(m04Ky.nghiVan)} ${td(m04Ky.viPham)} ${td(tile04)} ${td(ngayHD04Ky,'center',true,'#FFF2CC')}
+  ${td(m04Luy.tong)} ${td(m04Luy.nghiVan)} ${td(m04Luy.viPham)} ${td(ngayHD04Luy,'center',true,'#FFF2CC')}
 </tr>
 <tr>
   ${td('05')} ${td('Cát Lái + Giang Nam','left')} ${td('Di động (Eagle M60-366)','left')}
-  ${td(m05Ky.tong)} ${td(m05Ky.nghiVan)} ${td(m05Ky.viPham)} ${td(tile05)} ${td('','center',false,'#FFF2CC')}
-  ${td(m05Luy.tong)} ${td(m05Luy.nghiVan)} ${td(m05Luy.viPham)} ${td('','center',false,'#FFF2CC')}
+  ${td(m05Ky.tong)} ${td(m05Ky.nghiVan)} ${td(m05Ky.viPham)} ${td(tile05)} ${td(ngayHD05Ky,'center',true,'#FFF2CC')}
+  ${td(m05Luy.tong)} ${td(m05Luy.nghiVan)} ${td(m05Luy.viPham)} ${td(ngayHD05Luy,'center',true,'#FFF2CC')}
 </tr>
 <tr style="background:#BDD7EE;font-weight:bold">
   <td colspan="3" style="border:1px solid #000;padding:4px 6px;text-align:center;font-weight:bold;background:#BDD7EE">Tổng</td>
@@ -4099,14 +4160,14 @@ function exportBaoCaoThang() {
   ${td(m04Ky.nghiVan+m05Ky.nghiVan,'center',true,'#BDD7EE')}
   ${td('0','center',true,'#BDD7EE')}
   ${td(tileTotal,'center',true,'#BDD7EE')}
-  ${td('','center',false,'#FFF2CC')}
+  ${td((ngayHD04Ky&&ngayHD05Ky)?(parseInt(ngayHD04Ky)+parseInt(ngayHD05Ky)):'' ,'center',true,'#FFF2CC')}
   ${td(m04Luy.tong+m05Luy.tong,'center',true,'#BDD7EE')}
   ${td(m04Luy.nghiVan+m05Luy.nghiVan,'center',true,'#BDD7EE')}
   ${td('0','center',true,'#BDD7EE')}
-  ${td('','center',false,'#FFF2CC')}
+  ${td((ngayHD04Luy&&ngayHD05Luy)?(parseInt(ngayHD04Luy)+parseInt(ngayHD05Luy)):'' ,'center',true,'#FFF2CC')}
 </tr>
 </table>
-<p><i>(*) Cột Số ngày hoạt động màu vàng: để trống, tự điền tay.</i></p>
+<p><i>(*) Số ngày hoạt động đã được điền tự động từ thông tin nhập.</i></p>
 <p><i>Ghi chú: Máy 01, 02, 03 tại KV1 hiện đang hư hỏng, tạm dừng hoạt động.</i></p>
 <br>
 <p>1.2. Đánh giá về hiệu quả, hiệu suất của máy soi container:</p>
