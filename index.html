@@ -777,6 +777,10 @@
   <div class="header-status" id="headerDate">
     <div style="color: var(--text); font-size: 12px;" id="currentDate"></div>
     <div style="display:flex;gap:6px;margin-top:6px;justify-content:flex-end;">
+      <button onclick="showPortManager()"
+        style="background:rgba(244,162,97,0.15);border:1px solid rgba(244,162,97,0.3);color:var(--gold);padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;">
+        🏢 Cảng
+      </button>
       <button onclick="document.getElementById('changePwModal').classList.add('show')"
         style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:var(--text-dim);padding:4px 10px;border-radius:6px;font-size:11px;cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;">
         🔑 Đổi mật khẩu
@@ -1719,6 +1723,310 @@ window.addEventListener('load', async () => {
 });
 
 // ═══════════════════════════════════════════════
+// CẤU HÌNH CẢNG — QUẢN LÝ LINH HOẠT
+// ═══════════════════════════════════════════════
+/*
+  Mỗi cảng có:
+  - id:       key nội bộ (không đổi)
+  - name:     tên hiển thị
+  - aliases:  các tên khác trong file Excel (để nhận diện)
+  - machine:  tên máy soi
+  - active:   đang hoạt động
+  - merged:   nếu có → cảng này đang gộp vào cảng khác (id)
+*/
+const PORT_DEFAULTS = [
+  {
+    id: 'CAT_LAI',
+    name: 'Cát Lái',
+    aliases: ['Cát Lái', 'CAT LAI', 'CATLAI', 'Cát Lái + Giang Nam', 'Cat Lai'],
+    machine: 'Di động (Eagle M60-366)',
+    active: true,
+    merged: null
+  },
+  {
+    id: 'GIANG_NAM',
+    name: 'Giang Nam',
+    aliases: ['Giang Nam', 'GIANG NAM', 'GiangNam'],
+    machine: 'Di động (Eagle M60-366)',
+    active: true,
+    merged: 'CAT_LAI'   // ← mặc định: gộp vào Cát Lái
+  },
+  {
+    id: 'SPITC',
+    name: 'SP-ITC',
+    aliases: ['SPITC', 'SP-ITC', 'SP ITC', 'Cảng SP-ITC'],
+    machine: 'Di động (Eagle M60-369)',
+    active: true,
+    merged: null
+  }
+];
+
+// Load cấu hình cảng từ localStorage (nếu đã customized)
+function loadPortConfig() {
+  try {
+    const saved = LS.get('scKV1_ports');
+    if (saved) return JSON.parse(saved);
+  } catch(e) {}
+  return JSON.parse(JSON.stringify(PORT_DEFAULTS)); // deep copy
+}
+
+function savePortConfig(cfg) {
+  LS.set('scKV1_ports', JSON.stringify(cfg));
+}
+
+// Lấy danh sách cảng hiện hoạt (không bị gộp)
+function getActivePorts() {
+  return loadPortConfig().filter(p => p.active && !p.merged);
+}
+
+// Lấy TẤT CẢ cảng kể cả bị gộp
+function getAllPorts() {
+  return loadPortConfig().filter(p => p.active);
+}
+
+// Chuẩn hóa tên cảng từ file Excel → id cảng
+function normalizeCangToId(str) {
+  if (!str) return 'CAT_LAI';
+  const s = str.toUpperCase().trim()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const cfg = loadPortConfig();
+  for (const p of cfg) {
+    for (const alias of p.aliases) {
+      const a = alias.toUpperCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (s.includes(a) || a.includes(s)) return p.id;
+    }
+  }
+  return 'CAT_LAI'; // fallback
+}
+
+// Lấy tên hiển thị của cảng theo id
+function getPortName(id) {
+  const cfg = loadPortConfig();
+  const p = cfg.find(p => p.id === id);
+  return p ? p.name : id;
+}
+
+// Lấy id "thực tế" cho việc tính toán:
+// Nếu cảng bị gộp → trả về id cảng cha
+function getEffectivePortId(id) {
+  const cfg = loadPortConfig();
+  const p = cfg.find(p => p.id === id);
+  if (p && p.merged) return p.merged;
+  return id;
+}
+
+// Lấy tên hiển thị nhóm cảng (VD: "Cát Lái + Giang Nam" khi gộp)
+function getPortGroupName(id) {
+  const cfg = loadPortConfig();
+  const children = cfg.filter(p => p.active && p.merged === id);
+  const parent = cfg.find(p => p.id === id);
+  if (!parent) return id;
+  if (children.length === 0) return parent.name;
+  return parent.name + ' + ' + children.map(c => c.name).join(' + ');
+}
+
+// normalizeCang vẫn trả về tên để backward-compat
+function normalizeCang(str) {
+  const id = normalizeCangToId(str);
+  return getPortName(id);
+}
+
+// ── MODAL QUẢN LÝ CẢNG ──
+function showPortManager() {
+  const cfg = loadPortConfig();
+
+  const portRows = cfg.map((p, i) => {
+    const mergeOptions = ['<option value="">— Độc lập —</option>',
+      ...cfg.filter(x => x.id !== p.id && !x.merged)
+        .map(x => `<option value="${x.id}" ${p.merged===x.id?'selected':''}>${x.name}</option>`)
+    ].join('');
+
+    return `<tr id="port-row-${i}">
+      <td style="padding:8px 6px">
+        <input value="${p.name}" onchange="updatePort(${i},'name',this.value)"
+          style="background:var(--navy);border:1px solid var(--border);color:var(--text);
+          padding:5px 8px;border-radius:4px;font-size:12px;width:130px;outline:none;">
+      </td>
+      <td style="padding:8px 6px">
+        <input value="${p.machine||''}" onchange="updatePort(${i},'machine',this.value)"
+          style="background:var(--navy);border:1px solid var(--border);color:var(--text);
+          padding:5px 8px;border-radius:4px;font-size:12px;width:190px;outline:none;">
+      </td>
+      <td style="padding:8px 6px;text-align:center">
+        <select onchange="updatePort(${i},'merged',this.value||null)"
+          style="background:var(--navy);border:1px solid var(--border);color:var(--text);
+          padding:5px 6px;border-radius:4px;font-size:11px;outline:none;">
+          ${mergeOptions}
+        </select>
+      </td>
+      <td style="padding:8px 6px;text-align:center">
+        <label style="display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;font-size:11px">
+          <input type="checkbox" ${p.active?'checked':''} onchange="updatePort(${i},'active',this.checked)"
+            style="width:14px;height:14px;cursor:pointer;">
+          <span style="color:${p.active?'var(--success)':'var(--text-dim)'}">${p.active?'Hoạt động':'Tắt'}</span>
+        </label>
+      </td>
+      <td style="padding:8px 6px;text-align:center">
+        <button onclick="deletePort(${i})"
+          style="background:rgba(230,57,70,0.2);border:none;color:var(--accent);
+          cursor:pointer;border-radius:4px;padding:3px 8px;font-size:11px;">🗑</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  // Preview nhóm cảng
+  const activePorts = cfg.filter(p => p.active && !p.merged);
+  const preview = activePorts.map(p => {
+    const groupName = getPortGroupName(p.id);
+    const machine = p.machine || '—';
+    return `<div style="background:rgba(46,196,182,0.07);border:1px solid var(--border);
+      border-radius:8px;padding:8px 12px;font-size:12px;">
+      <b style="color:var(--teal)">${groupName}</b>
+      <span style="color:var(--text-dim);font-size:11px;margin-left:8px">${machine}</span>
+    </div>`;
+  }).join('');
+
+  const modal = document.createElement('div');
+  modal.id = 'portManagerModal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
+  modal.innerHTML = `
+  <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;
+    padding:24px;max-width:720px;width:96vw;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <div style="font-size:15px;font-weight:700;color:var(--teal)">🏢 Quản lý Cảng</div>
+      <button onclick="this.closest('#portManagerModal').remove()"
+        style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer">✕</button>
+    </div>
+
+    <div style="font-size:11px;color:#93c5fd;background:rgba(37,99,235,0.1);
+      border:1px solid rgba(37,99,235,0.3);border-radius:6px;padding:10px;margin-bottom:16px;">
+      💡 <b>Gộp cảng:</b> Khi Giang Nam gộp vào Cát Lái → dữ liệu Giang Nam tính về Cát Lái trong báo cáo.<br>
+      Khi tách → mỗi cảng có dòng riêng. Dữ liệu cũ "Cát Lái + Giang Nam" sẽ tính về Cát Lái.
+    </div>
+
+    <!-- Bảng cảng -->
+    <div style="background:var(--navy);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead><tr style="background:rgba(0,0,0,0.3)">
+          <th style="padding:8px 6px;text-align:left;color:var(--teal);font-size:10px;text-transform:uppercase">Tên cảng</th>
+          <th style="padding:8px 6px;text-align:left;color:var(--teal);font-size:10px;text-transform:uppercase">Máy soi</th>
+          <th style="padding:8px 6px;text-align:center;color:var(--teal);font-size:10px;text-transform:uppercase">Gộp vào</th>
+          <th style="padding:8px 6px;text-align:center;color:var(--teal);font-size:10px;text-transform:uppercase">Trạng thái</th>
+          <th style="padding:8px 6px;text-align:center;color:var(--teal);font-size:10px;text-transform:uppercase">Xóa</th>
+        </tr></thead>
+        <tbody id="portTableBody">${portRows}</tbody>
+      </table>
+    </div>
+
+    <!-- Thêm cảng mới -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+      <input id="newPortName" placeholder="Tên cảng mới (VD: Phú Hữu)"
+        style="background:var(--navy);border:1px solid var(--border);color:var(--text);
+        padding:8px 12px;border-radius:6px;font-size:13px;outline:none;flex:1;min-width:160px;">
+      <input id="newPortMachine" placeholder="Tên máy soi"
+        style="background:var(--navy);border:1px solid var(--border);color:var(--text);
+        padding:8px 12px;border-radius:6px;font-size:13px;outline:none;flex:1;min-width:160px;">
+      <button onclick="addNewPort()"
+        style="background:linear-gradient(135deg,var(--teal),#20a4a0);color:var(--navy);
+        border:none;border-radius:6px;padding:8px 16px;font-size:13px;font-weight:700;
+        cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;white-space:nowrap;">
+        ➕ Thêm cảng
+      </button>
+    </div>
+
+    <!-- Preview nhóm -->
+    <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:8px;">
+      📊 Preview báo cáo sẽ có các nhóm:
+    </div>
+    <div id="portPreview" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px;">
+      ${preview}
+    </div>
+
+    <!-- Buttons -->
+    <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+      <button onclick="resetPortConfig()"
+        style="background:rgba(244,162,97,0.15);border:1px solid rgba(244,162,97,0.3);
+        color:var(--gold);padding:9px 16px;border-radius:6px;cursor:pointer;
+        font-size:12px;font-family:'Be Vietnam Pro',sans-serif;">
+        🔄 Khôi phục mặc định
+      </button>
+      <button onclick="applyPortConfig()"
+        style="background:linear-gradient(135deg,var(--teal),#20a4a0);color:var(--navy);
+        border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:700;
+        cursor:pointer;font-family:'Be Vietnam Pro',sans-serif;">
+        ✅ Lưu & Áp dụng
+      </button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+}
+
+// Cập nhật 1 trường của cảng
+function updatePort(idx, field, value) {
+  const cfg = loadPortConfig();
+  cfg[idx][field] = value;
+  savePortConfig(cfg);
+  refreshPortPreview(cfg);
+}
+
+function deletePort(idx) {
+  const cfg = loadPortConfig();
+  if (!confirm(`Xóa cảng "${cfg[idx].name}"?`)) return;
+  cfg.splice(idx, 1);
+  savePortConfig(cfg);
+  showPortManager(); // refresh modal
+  document.getElementById('portManagerModal')?.remove();
+  showPortManager();
+}
+
+function addNewPort() {
+  const name = document.getElementById('newPortName').value.trim();
+  const machine = document.getElementById('newPortMachine').value.trim();
+  if (!name) { showToast('Vui lòng nhập tên cảng', true); return; }
+  const cfg = loadPortConfig();
+  const id = name.toUpperCase().replace(/\s+/g, '_')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  cfg.push({ id, name, aliases: [name], machine, active: true, merged: null });
+  savePortConfig(cfg);
+  document.getElementById('portManagerModal')?.remove();
+  showPortManager();
+  showToast(`✅ Đã thêm cảng ${name}`);
+}
+
+function resetPortConfig() {
+  if (!confirm('Khôi phục cấu hình cảng về mặc định?')) return;
+  LS.remove('scKV1_ports');
+  document.getElementById('portManagerModal')?.remove();
+  showPortManager();
+  showToast('✅ Đã khôi phục mặc định');
+}
+
+function applyPortConfig() {
+  document.getElementById('portManagerModal')?.remove();
+  showToast('✅ Đã lưu cấu hình cảng! Tạo lại báo cáo để áp dụng.');
+  // Re-render nếu đang có dữ liệu
+  if (reportData) generateReport();
+}
+
+function refreshPortPreview(cfg) {
+  const el = document.getElementById('portPreview');
+  if (!el) return;
+  const active = cfg.filter(p => p.active && !p.merged);
+  el.innerHTML = active.map(p => {
+    const groupName = (() => {
+      const children = cfg.filter(x => x.active && x.merged === p.id);
+      return children.length ? p.name + ' + ' + children.map(c=>c.name).join(' + ') : p.name;
+    })();
+    return `<div style="background:rgba(46,196,182,0.07);border:1px solid var(--border);
+      border-radius:8px;padding:8px 12px;font-size:12px;">
+      <b style="color:var(--teal)">${groupName}</b>
+      <span style="color:var(--text-dim);font-size:11px;margin-left:8px">${p.machine||'—'}</span>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════
 let qlrrData   = [];
@@ -2262,20 +2570,25 @@ function generateReport() {
   //   J Tồn cuối kỳ      = B + C - F
   // ════════════════════════════════════════════════════
 
-  // Bước 1: Tạo map cont → cảng từ file QLRR
+  // Bước 1: Tạo map cont → id cảng từ file QLRR
   const contCangMap = {};
-  for (const c of qlrrData) contCangMap[c.cont] = c.cang;
+  for (const c of qlrrData) {
+    contCangMap[c.cont] = normalizeCangToId(c.cang);
+  }
 
-  // Bước 2: Hàm lấy cảng cho 1 cont (fallback = Cát Lái + Giang Nam)
-  const getCang = cont => contCangMap[cont] || 'Cát Lái + Giang Nam';
+  // Bước 2: Hàm lấy id cảng hiệu quả (đã xử lý gộp)
+  const getCangId = cont => {
+    const id = contCangMap[cont] || 'CAT_LAI';
+    return getEffectivePortId(id);
+  };
 
-  // Bước 3: Tính từng chỉ tiêu theo cảng
-  const ports   = ['Cát Lái + Giang Nam', 'SPITC'];
+  // Bước 3: Lấy danh sách nhóm cảng (đã gộp)
+  const activePorts = getActivePorts();
+  const ports = activePorts.map(p => p.id);
   const tonghop = {};
 
-  for (const p of ports) {
-    const isSPITC = p === 'SPITC';
-    const match   = d => (getCang(d.cont) === 'SPITC') === isSPITC;
+  for (const portId of ports) {
+    const match = d => getCangId(d.cont) === portId;
 
     const sub = dasoiData.filter(match);
 
@@ -2314,10 +2627,11 @@ function generateReport() {
     // D: Tỷ lệ %
     const D = (C / DINH_MUC * 100).toFixed(1) + '%';
 
-    tonghop[p] = {
+    tonghop[portId] = {
       tonDau: B, luaChon: C, tile: D, dinhMuc: DINH_MUC,
       luyCont: E, daSoi: F, nghiVan: G,
-      luyDaSoi: H, luyNghiVan: I, tonCuoi: J
+      luyDaSoi: H, luyNghiVan: I, tonCuoi: J,
+      name: getPortGroupName(portId)
     };
   }
 
@@ -2371,27 +2685,29 @@ function renderTongHop() {
     `Ngày ${fromD.toLocaleDateString('vi-VN')} — Định mức: ${DINH_MUC} cont/cảng/ngày`;
 
   const body = document.getElementById('tonghopBody');
+  const activePortList = getActivePorts();
   const rows = [
-    ['Cát Lái + Giang Nam', tonghop['Cát Lái + Giang Nam']],
-    ['SPITC', tonghop['SPITC']],
-    ['Tổng', tong]
+    ...activePortList.map(p => [p.id, tonghop[p.id] || {}]),
+    ['__TONG__', tong]
   ];
 
-  body.innerHTML = rows.map(([name, d], idx) => {
+  body.innerHTML = rows.map(([portId, d], idx) => {
+    const isTotal = portId === '__TONG__';
+    const name = isTotal ? 'Tổng' : (d.name || getPortGroupName(portId));
     const tileNum = parseFloat(d.tile);
     const tileColor = tileNum >= 100 ? 'var(--success)' : tileNum >= 70 ? 'var(--gold)' : 'var(--accent)';
     return `
-    <tr class="${idx===2?'total-row':''}">
+    <tr class="${isTotal?'total-row':''}">
       <td class="port-label" style="font-size:12px">${name}</td>
       <td class="num-cell" style="color:var(--gold)">${d.tonDau ?? '—'}</td>
-      <td class="num-cell">${d.luaChon}</td>
-      <td class="num-cell" style="color:${tileColor};font-weight:700;font-size:12px">${d.tile}<br><span style="font-size:9px;color:var(--text-dim);font-weight:400">ĐM:${d.dinhMuc}</span></td>
-      <td class="num-cell">${d.luyCont}</td>
-      <td class="num-cell" style="color:var(--teal)">${d.daSoi}</td>
-      <td class="num-cell" style="color:var(--accent)">${d.nghiVan}</td>
-      <td class="num-cell">${d.luyDaSoi}</td>
-      <td class="num-cell" style="color:var(--accent)">${d.luyNghiVan}</td>
-      <td class="num-cell" style="color:var(--gold);font-weight:700">${d.tonCuoi}</td>
+      <td class="num-cell">${d.luaChon ?? 0}</td>
+      <td class="num-cell" style="color:${tileColor};font-weight:700;font-size:12px">${d.tile || '0%'}<br><span style="font-size:9px;color:var(--text-dim);font-weight:400">ĐM:${d.dinhMuc || DINH_MUC}</span></td>
+      <td class="num-cell">${d.luyCont ?? 0}</td>
+      <td class="num-cell" style="color:var(--teal)">${d.daSoi ?? 0}</td>
+      <td class="num-cell" style="color:var(--accent)">${d.nghiVan ?? 0}</td>
+      <td class="num-cell">${d.luyDaSoi ?? 0}</td>
+      <td class="num-cell" style="color:var(--accent)">${d.luyNghiVan ?? 0}</td>
+      <td class="num-cell" style="color:var(--gold);font-weight:700">${d.tonCuoi ?? 0}</td>
     </tr>`;
   }).join('');
 
