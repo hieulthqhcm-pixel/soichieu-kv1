@@ -1294,18 +1294,53 @@ async function checkPw(entered) {
   return h === stored;
 }
 
+// ── NHẬN DIỆN THIẾT BỊ ──
+function getDeviceInfo() {
+  const ua = navigator.userAgent;
+  let device = 'Máy tính';
+  let browser = 'Unknown';
+  let os = 'Unknown';
+
+  // OS
+  if (/Windows NT 10/.test(ua)) os = 'Windows 10/11';
+  else if (/Windows NT 6/.test(ua)) os = 'Windows 7/8';
+  else if (/iPhone/.test(ua)) { os = 'iPhone'; device = 'iPhone'; }
+  else if (/iPad/.test(ua)) { os = 'iPad'; device = 'iPad'; }
+  else if (/Android/.test(ua)) {
+    os = 'Android';
+    device = /Mobile/.test(ua) ? 'Điện thoại Android' : 'Máy tính bảng Android';
+  }
+  else if (/Mac OS/.test(ua)) os = 'macOS';
+  else if (/Linux/.test(ua)) os = 'Linux';
+
+  // Browser
+  if (/Edg\//.test(ua)) browser = 'Edge';
+  else if (/Chrome\//.test(ua)) browser = 'Chrome';
+  else if (/Firefox\//.test(ua)) browser = 'Firefox';
+  else if (/Safari\//.test(ua)) browser = 'Safari';
+
+  // Tên thiết bị từ userAgent (Android model)
+  const androidModel = ua.match(/;\s*([^;)]+)\s+Build\//);
+  if (androidModel) device = androidModel[1].trim();
+
+  return { device, os, browser,
+    short: `${device} / ${os} / ${browser}` };
+}
+
 // ── AUDIT LOG ──
 function writeLog(action, detail) {
   try {
     const logs = JSON.parse(LS.get('scKV1_log') || '[]');
+    const dev = getDeviceInfo();
     logs.push({
       t: new Date().toLocaleString('vi-VN'),
       ts: Date.now(),
       action,
       detail,
-      ua: navigator.userAgent.substring(0, 60)
+      device: dev.device,
+      os: dev.os,
+      browser: dev.browser,
     });
-    // Giữ tối đa 200 bản ghi
     if (logs.length > 200) logs.splice(0, logs.length - 200);
     LS.set('scKV1_log', JSON.stringify(logs));
   } catch(e) {}
@@ -1467,38 +1502,155 @@ async function doChangePw() {
   showToast('✅ Đổi mật khẩu thành công!');
 }
 
-// ── XEM AUDIT LOG ──
+// ── XEM AUDIT LOG + QUẢN LÝ THIẾT BỊ ──
 function showAuditLog() {
   const logs = JSON.parse(LS.get('scKV1_log') || '[]');
-  if (logs.length === 0) { showToast('Chưa có log nào'); return; }
-  const rows = logs.slice(-30).reverse().map(l =>
-    `<tr><td style="padding:4px 8px;color:var(--text-dim);white-space:nowrap;font-size:11px">${l.t}</td>
-     <td style="padding:4px 8px;color:${l.action.includes('FAIL')||l.action.includes('LOCK')?'var(--accent)':'var(--success)'};">${l.action}</td>
-     <td style="padding:4px 8px;font-size:11px;color:var(--text)">${l.detail}</td></tr>`
-  ).join('');
+  const devNow = getDeviceInfo();
+
+  // Thống kê thiết bị đã đăng nhập thành công
+  const loginLogs = logs.filter(l => l.action === 'LOGIN_OK' || l.action === 'SESSION_RESUME');
+  const deviceMap = {};
+  loginLogs.forEach(l => {
+    const key = `${l.device||'?'} / ${l.os||'?'} / ${l.browser||'?'}`;
+    if (!deviceMap[key]) deviceMap[key] = { count: 0, last: l.t, device: l.device, os: l.os, browser: l.browser };
+    deviceMap[key].count++;
+    deviceMap[key].last = l.t;
+  });
+
+  const deviceRows = Object.entries(deviceMap).map(([key, v]) => {
+    const isCurrent = v.device === devNow.device && v.os === devNow.os && v.browser === devNow.browser;
+    return `<tr style="${isCurrent?'background:rgba(46,196,182,0.1)':''}">
+      <td style="padding:6px 10px;font-size:12px">
+        ${v.device === 'iPhone' || v.device === 'iPad' ? '📱' :
+          v.device?.includes('Android') ? '📱' : '💻'}
+        <b style="color:${isCurrent?'var(--teal)':'var(--text)'}">${v.device||'?'}</b>
+        ${isCurrent ? '<span style="font-size:10px;color:var(--teal);margin-left:4px">(thiết bị này)</span>' : ''}
+      </td>
+      <td style="padding:6px 10px;font-size:11px;color:var(--text-dim)">${v.os||'?'}</td>
+      <td style="padding:6px 10px;font-size:11px;color:var(--text-dim)">${v.browser||'?'}</td>
+      <td style="padding:6px 10px;font-size:11px;color:var(--text-dim);text-align:center">${v.count}</td>
+      <td style="padding:6px 10px;font-size:11px;color:var(--text-dim);white-space:nowrap">${v.last}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--text-dim);padding:16px">Chưa có dữ liệu</td></tr>';
+
+  // Bảng log hoạt động
+  const actionRows = logs.slice(-50).reverse().map(l => {
+    const isWarn = l.action.includes('FAIL') || l.action.includes('LOCK');
+    const isGood = l.action === 'LOGIN_OK' || l.action === 'CHANGE_PW';
+    const color = isWarn ? 'var(--accent)' : isGood ? 'var(--success)' : 'var(--text-dim)';
+    const icon = isWarn ? '⚠️' : isGood ? '✅' : l.action === 'LOGOUT' ? '🚪' : '📌';
+    return `<tr>
+      <td style="padding:4px 8px;color:var(--text-dim);white-space:nowrap;font-size:11px">${l.t}</td>
+      <td style="padding:4px 8px;font-size:11px">${icon} <span style="color:${color}">${l.action}</span></td>
+      <td style="padding:4px 8px;font-size:11px;color:var(--text)">${l.detail||''}</td>
+      <td style="padding:4px 8px;font-size:11px;color:var(--text-dim)">${l.device||''} ${l.os||''}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="4" style="text-align:center;color:var(--text-dim);padding:16px">Chưa có log</td></tr>';
+
   const modal = document.createElement('div');
-  modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)';
-  modal.innerHTML = `<div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:24px;max-width:700px;width:94vw;max-height:80vh;overflow-y:auto;">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-      <div style="font-size:15px;font-weight:700;color:var(--teal)">📋 Nhật ký hoạt động (30 gần nhất)</div>
-      <button onclick="this.closest('div[style*=fixed]').remove()" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer">✕</button>
+  modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.82);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(5px)';
+  modal.innerHTML = `
+  <div style="background:var(--navy-mid);border:1px solid var(--border);border-radius:16px;padding:24px;
+    max-width:780px;width:96vw;max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+      <div style="font-size:15px;font-weight:700;color:var(--teal)">🛡️ Bảo mật & Nhật ký hoạt động</div>
+      <button onclick="this.closest('div[style*=fixed]').remove()"
+        style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer">✕</button>
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead><tr>
-        <th style="text-align:left;padding:6px 8px;color:var(--teal);border-bottom:1px solid var(--border)">Thời gian</th>
-        <th style="text-align:left;padding:6px 8px;color:var(--teal);border-bottom:1px solid var(--border)">Hành động</th>
-        <th style="text-align:left;padding:6px 8px;color:var(--teal);border-bottom:1px solid var(--border)">Chi tiết</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
+
+    <!-- Thiết bị đã đăng nhập -->
+    <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:8px;">
+      💻 Thiết bị đã đăng nhập
+    </div>
+    <div style="background:var(--navy);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:18px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="background:rgba(0,0,0,0.3)">
+          <th style="padding:8px 10px;text-align:left;color:var(--teal);font-size:10px;text-transform:uppercase">Thiết bị</th>
+          <th style="padding:8px 10px;text-align:left;color:var(--teal);font-size:10px;text-transform:uppercase">Hệ điều hành</th>
+          <th style="padding:8px 10px;text-align:left;color:var(--teal);font-size:10px;text-transform:uppercase">Trình duyệt</th>
+          <th style="padding:8px 10px;text-align:center;color:var(--teal);font-size:10px;text-transform:uppercase">Số lần</th>
+          <th style="padding:8px 10px;text-align:left;color:var(--teal);font-size:10px;text-transform:uppercase">Lần cuối</th>
+        </tr></thead>
+        <tbody>${deviceRows}</tbody>
+      </table>
+    </div>
+
+    <!-- Trạng thái tài khoản + Reset -->
+    <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;">
+      <div id="_lockStatus" style="flex:1;background:rgba(6,214,160,0.08);border:1px solid rgba(6,214,160,0.3);
+        border-radius:8px;padding:12px;font-size:12px;min-width:200px">
+        ✅ Tài khoản đang <b style="color:var(--success)">hoạt động bình thường</b>
+      </div>
+      <button onclick="_adminReset(this)"
+        style="background:rgba(244,162,97,0.15);border:1px solid rgba(244,162,97,0.4);
+        color:var(--gold);padding:10px 16px;border-radius:8px;cursor:pointer;
+        font-size:12px;font-weight:600;font-family:'Be Vietnam Pro',sans-serif;white-space:nowrap;">
+        🔓 Reset tài khoản bị khoá
+      </button>
+      <button onclick="_clearDeviceHistory()"
+        style="background:rgba(230,57,70,0.1);border:1px solid rgba(230,57,70,0.3);
+        color:var(--accent);padding:10px 16px;border-radius:8px;cursor:pointer;
+        font-size:12px;font-weight:600;font-family:'Be Vietnam Pro',sans-serif;white-space:nowrap;">
+        🗑 Xóa lịch sử thiết bị
+      </button>
+    </div>
+
+    <!-- Log hoạt động -->
+    <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:8px;">
+      📋 Nhật ký hoạt động (50 gần nhất)
+    </div>
+    <div style="background:var(--navy);border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="background:rgba(0,0,0,0.3)">
+          <th style="padding:7px 8px;text-align:left;color:var(--teal);font-size:10px;text-transform:uppercase;white-space:nowrap">Thời gian</th>
+          <th style="padding:7px 8px;text-align:left;color:var(--teal);font-size:10px;text-transform:uppercase">Hành động</th>
+          <th style="padding:7px 8px;text-align:left;color:var(--teal);font-size:10px;text-transform:uppercase">Chi tiết</th>
+          <th style="padding:7px 8px;text-align:left;color:var(--teal);font-size:10px;text-transform:uppercase">Thiết bị</th>
+        </tr></thead>
+        <tbody>${actionRows}</tbody>
+      </table>
+    </div>
     <div style="margin-top:12px;text-align:right;">
-      <button onclick="LS.remove('scKV1_log');this.closest('div[style*=fixed]').remove();showToast('Đã xóa log')"
-        style="background:rgba(230,57,70,0.2);border:1px solid rgba(230,57,70,0.3);color:var(--accent);padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-family:'Be Vietnam Pro',sans-serif;">
-        🗑 Xóa log
+      <button onclick="LS.remove('scKV1_log');this.closest('div[style*=fixed]').remove();showToast('Đã xóa toàn bộ log')"
+        style="background:rgba(230,57,70,0.15);border:1px solid rgba(230,57,70,0.3);color:var(--accent);
+        padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;
+        font-family:'Be Vietnam Pro',sans-serif;">
+        🗑 Xóa toàn bộ log
       </button>
     </div>
   </div>`;
+
+  // Cập nhật trạng thái khoá
+  const lockInfo = getLockInfo();
+  if (lockInfo.until && Date.now() < lockInfo.until) {
+    const remain = Math.ceil((lockInfo.until - Date.now()) / 60000);
+    modal.querySelector('#_lockStatus').innerHTML =
+      `🔒 Tài khoản đang <b style="color:var(--accent)">bị khoá</b> — còn ${remain} phút`;
+    modal.querySelector('#_lockStatus').style.cssText +=
+      ';background:rgba(230,57,70,0.08);border-color:rgba(230,57,70,0.3)';
+  }
+
   document.body.appendChild(modal);
+}
+
+function _adminReset(btn) {
+  if (!confirm('Reset tài khoản bị khoá?\nSẽ xóa trạng thái khoá, người dùng có thể thử lại.')) return;
+  LS.remove('scKV1_lock');
+  writeLog('ADMIN_RESET', 'Admin reset khoá tài khoản');
+  showToast('✅ Đã reset khoá tài khoản');
+  // Cập nhật UI
+  const statusEl = btn.closest('div').querySelector('#_lockStatus');
+  if (statusEl) statusEl.innerHTML = '✅ Tài khoản đang <b style="color:var(--success)">hoạt động bình thường</b>';
+}
+
+function _clearDeviceHistory() {
+  if (!confirm('Xóa toàn bộ lịch sử đăng nhập thiết bị?')) return;
+  const logs = JSON.parse(LS.get('scKV1_log') || '[]');
+  // Giữ lại log không phải login
+  const filtered = logs.filter(l => l.action !== 'LOGIN_OK' && l.action !== 'SESSION_RESUME');
+  LS.set('scKV1_log', JSON.stringify(filtered));
+  writeLog('CLEAR_HISTORY', 'Xóa lịch sử thiết bị');
+  showToast('✅ Đã xóa lịch sử thiết bị');
 }
 
 // ── BẢO VỆ GITHUB TOKEN: mã hóa trước khi lưu ──
@@ -4465,4 +4617,3 @@ ${[
 </script>
 </body>
 </html>
-
