@@ -1698,6 +1698,20 @@ async function saveGHToken(token) {
 
 // ── KIỂM TRA SESSION ──
 window.addEventListener('load', async () => {
+  // ── Mở khoá khẩn cấp qua URL: thêm #unlock vào cuối URL ──
+  if (location.hash === '#unlock') {
+    LS.remove('scKV1_lock');
+    LS.remove(SESSION_KEY);
+    history.replaceState(null,'',location.pathname);
+    showToast('✅ Đã mở khoá — thử đăng nhập lại');
+  }
+
+  // ── Tự xóa khoá nếu đã hết thời gian ──
+  const lock = getLockInfo();
+  if (lock.until && Date.now() >= lock.until) {
+    LS.remove('scKV1_lock');
+  }
+
   const sessionStr = LS.get(SESSION_KEY);
   let sessionValid = false;
   if (sessionStr) {
