@@ -3594,7 +3594,7 @@ function exportAppWithData() {
     + 'Object.keys(cg).sort().forEach(function(cn){var s=cg[cn];cb.innerHTML+=\'<tr><td class="cg">\'+cn+\'</td><td>\'+s.t+\'</td><td class="ng">\'+s.s+\'</td><td class="no">\'+s.c+\'</td><td class="nr">\'+s.n+\'</td></tr>\';});\n'
     + 'if(_bc){\n'
     + '  function row2(nm,o){return\'<tr><td class="cg">\'+nm+\'</td><td class="no">\'+o.td+\'</td><td class="nt">\'+o.lc+\'</td><td class="pct">\'+o.tl+\'</td><td class="ng">\'+o.ds+\'</td><td class="nr">\'+o.nv+\'</td><td>\'+o.lds+\'</td><td class="no">\'+o.tc+\'</td></tr>\';}\n'
-    + '  document.getElementById("bcArea").innerHTML=\'<div class="bc-card"><div class="bc-hdr"><div class="bc-title">B&#225;o C&#225;o Ng&#224;y \'+_bc.ngayBC+\'</div><div class="bc-sub">H&#7842;I QUAN C&#7�;A KH&#7826;U C&#7842;NG S&#192;I G&#210;N KHU V&#7920;C 1</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="text-align:left;padding-left:10px;min-width:80px">C&#7843;ng</th><th>T&#7891;n&#10;&#273;&#7847;u</th><th>L&#7921;a&#10;ch&#7885;n</th><th>T&#7927;&#10;l&#7879;</th><th>&#272;&#227;&#10;soi</th><th>Nghi&#10;v&#7845;n</th><th>L&#361;y k&#7871;</th><th>T&#7891;n&#10;cu&#7889;i</th></tr></thead><tbody>\'+row2("C&#225;t L&#225;i+GN",_bc.cl)+row2("SP-ITC",_bc.sp)+\'<tr class="tot"><td class="cg" style="color:#fff">T&#7880;NG</td><td class="no">\'+_bc.t.td+\'</td><td class="nt">\'+_bc.t.lc+\'</td><td class="pct">\'+_bc.t.tl+\'</td><td class="ng">\'+_bc.t.ds+\'</td><td class="nr">\'+_bc.t.nv+\'</td><td>\'+_bc.t.lds+\'</td><td class="no">\'+_bc.t.tc+\'</td></tr></tbody></table></div></div>\';\n'
+    + '  document.getElementById("bcArea").innerHTML=\'<div class="bc-card"><div class="bc-hdr"><div class="bc-title">B&#225;o C&#225;o Ng&#224;y \'+_bc.ngayBC+\'</div><div class="bc-sub">H&#7842;I QUAN C&#7 ;A KH&#7826;U C&#7842;NG S&#192;I G&#210;N KHU V&#7920;C 1</div></div><div style="overflow-x:auto"><table class="tbl"><thead><tr><th style="text-align:left;padding-left:10px;min-width:80px">C&#7843;ng</th><th>T&#7891;n&#10;&#273;&#7847;u</th><th>L&#7921;a&#10;ch&#7885;n</th><th>T&#7927;&#10;l&#7879;</th><th>&#272;&#227;&#10;soi</th><th>Nghi&#10;v&#7845;n</th><th>L&#361;y k&#7871;</th><th>T&#7891;n&#10;cu&#7889;i</th></tr></thead><tbody>\'+row2("C&#225;t L&#225;i+GN",_bc.cl)+row2("SP-ITC",_bc.sp)+\'<tr class="tot"><td class="cg" style="color:#fff">T&#7880;NG</td><td class="no">\'+_bc.t.td+\'</td><td class="nt">\'+_bc.t.lc+\'</td><td class="pct">\'+_bc.t.tl+\'</td><td class="ng">\'+_bc.t.ds+\'</td><td class="nr">\'+_bc.t.nv+\'</td><td>\'+_bc.t.lds+\'</td><td class="no">\'+_bc.t.tc+\'</td></tr></tbody></table></div></div>\';\n'
     + '} else {\n'
     + '  document.getElementById("bcArea").innerHTML=\'<div class="empty">Chua co bao cao<br><small style="color:#4a6080">Tao bao cao tren may tinh truoc khi xuat</small></div>\';\n'
     + '}\n'
@@ -3919,12 +3919,11 @@ function exportQLRR() {
      {hpt:24},{hpt:10},{hpt:16},{hpt:20},{hpt:20},{hpt:10},{hpt:18},{hpt:15}]);
   applySheetStyle(ws1q,{numCols:10,
     unitRows:[{row:1},{row:2}], titleRows:[{row:4}], subRows:[{row:5},{row:6}],
-    hdrRows:[{row:9},{row:10}], idxRows:[{row:12}],
+    hdrRows:[{row:9},{row:10}], idxRows:[{row:11}],
     dataRows:[
-      ...buildDataRows(13,4,10,{leftCols:[1,2],tealCols:[3,6],redCols:[4,7],totalAtLast:false}),
-      {row:17,isTotal:true,leftCols:[1,2]},
-      ...buildDataRows(18,6,10,{leftCols:[1,2],tealCols:[3,6],redCols:[4,7]}),
-      {row:24,isTotal:true,leftCols:[1,2]},
+      ...buildDataRows(12,4,10,{leftCols:[1,2],tealCols:[3,6],redCols:[4,7],totalAtLast:false}),
+      ...buildDataRows(16,4,10,{leftCols:[1,2],tealCols:[3,6],redCols:[4,7],totalAtLast:false}),
+      {row:20,isTotal:true,leftCols:[0,1,2]},
     ]
   });
 
@@ -4178,33 +4177,9 @@ function exportQLRR() {
     dataRows:buildDataRows(12,5,22,{leftCols:[1,2],tealCols:[3,4],redCols:[14,15]})
   });
 
-  const ws4q = addSheet('4-QLRR', s4rows, [
-    {s:{r:0,c:0},e:{r:0,c:21}},{s:{r:1,c:0},e:{r:1,c:21}},{s:{r:2,c:0},e:{r:2,c:21}},
-    {s:{r:4,c:0},e:{r:4,c:21}},{s:{r:5,c:0},e:{r:5,c:21}},{s:{r:6,c:0},e:{r:6,c:21}},
-    {s:{r:8,c:0},e:{r:8,c:21}},
-  ], [4,18,12,14,12,12,16,10,10,18,14,14,20,18,14,22,16,14,14,12,16,12],
-  [{hpt:16},{hpt:20},{hpt:18}]);
-  applySheetStyle(ws4q,{numCols:22,
-    unitRows:[{row:1},{row:2}],titleRows:[{row:4}],subRows:[{row:5},{row:6}],hdrRows:[{row:9},{row:10}],
-    dataRows:buildDataRows(12,5,22,{leftCols:[1,2,6],redCols:[14,15]})
-  });
-
-  const ws5q = addSheet('5-QLRR', s5rows, [
-    {s:{r:0,c:0},e:{r:0,c:18}},{s:{r:1,c:0},e:{r:1,c:18}},{s:{r:2,c:0},e:{r:2,c:18}},
-    {s:{r:4,c:0},e:{r:4,c:18}},{s:{r:5,c:0},e:{r:5,c:18}},{s:{r:6,c:0},e:{r:6,c:18}},
-    {s:{r:8,c:0},e:{r:8,c:18}},
-    {s:{r:9,c:0},e:{r:10,c:0}},{s:{r:9,c:1},e:{r:10,c:1}},{s:{r:9,c:2},e:{r:10,c:2}},
-    {s:{r:9,c:3},e:{r:10,c:3}},{s:{r:9,c:4},e:{r:10,c:4}},{s:{r:9,c:5},e:{r:10,c:5}},
-    {s:{r:9,c:6},e:{r:10,c:6}},{s:{r:9,c:7},e:{r:10,c:7}},{s:{r:9,c:8},e:{r:10,c:8}},
-    {s:{r:9,c:9},e:{r:10,c:9}},{s:{r:9,c:10},e:{r:10,c:10}},
-    {s:{r:9,c:11},e:{r:9,c:12}},{s:{r:9,c:13},e:{r:10,c:13}},
-    {s:{r:9,c:14},e:{r:9,c:16}},{s:{r:9,c:17},e:{r:10,c:17}},{s:{r:9,c:18},e:{r:10,c:18}},
-  ], [4,12,10,18,8,20,18,10,22,18,12,22,16,14,18,14,14,14,12],
-  [{hpt:16},{hpt:20},{hpt:18}]);
-  applySheetStyle(ws5q,{numCols:19,
-    unitRows:[{row:1},{row:2}],titleRows:[{row:4}],subRows:[{row:5},{row:6}],hdrRows:[{row:9},{row:10}],
-    dataRows:buildDataRows(12,5,19,{leftCols:[1,5,6],tealCols:[3,4],redCols:[11,15]})
-  });
+  // ════════════════════════════════════════════
+  // SHEET 4/QLRR — Xuất khẩu (blank template)
+  // ════════════════════════════════════════════
   const s4rows = [
     ['Biểu mẫu số 04/QLRR: Báo cáo kết quả soi chiếu hàng hóa xuất khẩu theo từng máy soi tại địa bàn theo ngày'],
     [DON_VI_TREN],[DON_VI_DUOI],[],
@@ -4278,6 +4253,30 @@ function exportQLRR() {
     [`Lập báo cáo ngày ${ngayBC}`,'','','','','','CHI CỤC TRƯỞNG'],
     ['(Ký, ghi rõ họ tên)','','','','','','(Ký tên, đóng dấu)'],
   ];
+
+  // ── addSheet cho sheet 4 (Xuất khẩu) ──
+  const ws4q = addSheet('4-QLRR', s4rows, [
+    {s:{r:0,c:0},e:{r:0,c:21}},{s:{r:1,c:0},e:{r:1,c:21}},{s:{r:2,c:0},e:{r:2,c:21}},
+    {s:{r:4,c:0},e:{r:4,c:21}},{s:{r:5,c:0},e:{r:5,c:21}},{s:{r:6,c:0},e:{r:6,c:21}},
+    {s:{r:8,c:0},e:{r:8,c:21}},
+  ], [4,18,12,14,18,14,20,16,12,18,14,16,14,14,14,16,14,14,14,16,12,12],
+  [{hpt:16},{hpt:20},{hpt:18},{hpt:10},{hpt:24},{hpt:20},{hpt:15}]);
+  applySheetStyle(ws4q,{numCols:22,
+    unitRows:[{row:1},{row:2}],titleRows:[{row:4}],subRows:[{row:5},{row:6}],hdrRows:[{row:9},{row:10}],
+    dataRows:buildDataRows(12,5,22,{leftCols:[1],tealCols:[2,3],redCols:[15,16]})
+  });
+
+  // ── addSheet cho sheet 5 (Hàng tồn quá 30 ngày) ──
+  const ws5q = addSheet('5-QLRR', s5rows, [
+    {s:{r:0,c:0},e:{r:0,c:18}},{s:{r:1,c:0},e:{r:1,c:18}},{s:{r:2,c:0},e:{r:2,c:18}},
+    {s:{r:4,c:0},e:{r:4,c:18}},{s:{r:5,c:0},e:{r:5,c:18}},{s:{r:6,c:0},e:{r:6,c:18}},
+    {s:{r:8,c:0},e:{r:8,c:18}},
+  ], [4,12,14,12,12,20,16,12,16,18,14,16,14,14,14,16,14,14,14],
+  [{hpt:16},{hpt:20},{hpt:18},{hpt:10},{hpt:24},{hpt:20},{hpt:15}]);
+  applySheetStyle(ws5q,{numCols:19,
+    unitRows:[{row:1},{row:2}],titleRows:[{row:4}],subRows:[{row:5},{row:6}],hdrRows:[{row:9},{row:10}],
+    dataRows:buildDataRows(12,5,19,{leftCols:[1,2],tealCols:[3,4],redCols:[11,12]})
+  });
 
   // Download
   const ngayStr = fromD.toLocaleDateString('vi-VN').replace(/\//g,'-');
