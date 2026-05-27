@@ -2963,7 +2963,263 @@ function deleteDS(idx) {
 }
 
 // ─── XUẤT EXCEL BÁO CÁO NGÀY ───
-function exportExcel() {
+// ═══════════════════════════════════════════════
+// XLSX STYLING HELPER — áp dụng cho tất cả sheet
+// ═══════════════════════════════════════════════
+function _applyStyle(ws, r, c, style) {
+  const addr = XLSX.utils.encode_cell({r, c});
+  if (!ws[addr]) ws[addr] = {v: '', t: 's'};
+  ws[addr].s = style;
+}
+
+function _styleRange(ws, r1, c1, r2, c2, style) {
+  for (let r = r1; r <= r2; r++)
+    for (let c = c1; c <= c2; c++)
+      _applyStyle(ws, r, c, style);
+}
+
+// Màu sắc palette
+const C = {
+  NAVY:    '1A3A6E', TEAL:    '0E7C7B', TEAL_LT: 'E0F5F5',
+  GOLD:    'B8860B', GOLD_LT: 'FFF8E1', GOLD_BG:  'FFF2CC',
+  RED:     'C0392B', RED_LT:  'FDEDEC', RED_BG:   'FFCCCC',
+  ORANGE:  'E67E22', ORANGE_LT:'FFF3E0',
+  GREEN:   '1B5E20', GREEN_LT: 'E8F5E9',
+  BLUE_LT: 'DBEAFE', BLUE_MID: 'BFDBFE', BLUE_HDR: 'EFF6FF',
+  WHITE:   'FFFFFF', GRAY_LT:  'F8FAFC', GRAY_MID: 'E2E8F0',
+  TEXT:    '0F172A', TEXT_DIM: '475569',
+};
+
+// Border helpers
+const bThin  = s => ({style:'thin',  color:{rgb:s||'CCCCCC'}});
+const bMed   = s => ({style:'medium',color:{rgb:s||'888888'}});
+const bFull  = (t,b,l,r) => ({top:t,bottom:b,left:l,right:r});
+const bAll   = s => bFull(bThin(s),bThin(s),bThin(s),bThin(s));
+const bAllMed= s => bFull(bMed(s), bMed(s), bMed(s), bMed(s));
+
+// Font helpers
+const fnt = (bold,sz,color,name) => ({bold:!!bold,sz:sz||10,color:{rgb:color||C.TEXT},name:name||'Times New Roman'});
+const aln = (h,v,wrap) => ({horizontal:h||'center',vertical:v||'center',wrapText:!!wrap});
+
+// Preset styles
+const XS = {
+  // ── Header dòng 1: tên đơn vị (nền xanh navy đậm)
+  unitTop: {
+    fill:{fgColor:{rgb:C.NAVY}},
+    font:fnt(1,11,C.WHITE),
+    alignment:aln('center','center',true),
+    border:bAll(C.TEAL)
+  },
+  // ── Header dòng 2: tiêu đề báo cáo (xanh teal đậm)
+  titleRow: {
+    fill:{fgColor:{rgb:C.TEAL}},
+    font:fnt(1,12,C.WHITE),
+    alignment:aln('center','center',true),
+    border:bAll(C.TEAL)
+  },
+  // ── Dòng phụ: ngày lập / ghi chú (xanh nhạt)
+  subTitle: {
+    fill:{fgColor:{rgb:C.BLUE_HDR}},
+    font:fnt(0,10,C.NAVY),
+    alignment:aln('center','center'),
+    border:bAll('BFDBFE')
+  },
+  // ── Header cột chính (xanh navy vừa)
+  colHdr: {
+    fill:{fgColor:{rgb:'1E3A5F'}},
+    font:fnt(1,10,C.WHITE),
+    alignment:aln('center','center',true),
+    border:bFull(bMed(C.TEAL),bMed(C.TEAL),bThin('334E68'),bThin('334E68'))
+  },
+  // ── Header cột phụ (xanh teal nhạt hơn)
+  colHdrSub: {
+    fill:{fgColor:{rgb:'2D6A9F'}},
+    font:fnt(1,9,C.WHITE),
+    alignment:aln('center','center',true),
+    border:bAll('3A85C4')
+  },
+  // ── Dòng số thứ tự cột (1)(2)(3)...
+  colIdx: {
+    fill:{fgColor:{rgb:'0F2A47'}},
+    font:fnt(1,8,'9BB8D4'),
+    alignment:aln('center','center'),
+    border:bAll('1A3A5F')
+  },
+  // ── Data thường (trắng)
+  data: {
+    fill:{fgColor:{rgb:C.WHITE}},
+    font:fnt(0,10,C.TEXT),
+    alignment:aln('center','center',true),
+    border:bAll()
+  },
+  // ── Data căn trái
+  dataL: {
+    fill:{fgColor:{rgb:C.WHITE}},
+    font:fnt(0,10,C.TEXT),
+    alignment:aln('left','center',true),
+    border:bAll()
+  },
+  // ── Data xen kẽ (stripe)
+  dataStripe: {
+    fill:{fgColor:{rgb:C.GRAY_LT}},
+    font:fnt(0,10,C.TEXT),
+    alignment:aln('center','center',true),
+    border:bAll()
+  },
+  dataStripeL: {
+    fill:{fgColor:{rgb:C.GRAY_LT}},
+    font:fnt(0,10,C.TEXT),
+    alignment:aln('left','center',true),
+    border:bAll()
+  },
+  // ── Số liệu teal (đã soi, lũy kế)
+  numTeal: {
+    fill:{fgColor:{rgb:C.TEAL_LT}},
+    font:fnt(1,10,'0E5C5B'),
+    alignment:aln('center','center'),
+    border:bAll('A7D7D6')
+  },
+  numTealStripe: {
+    fill:{fgColor:{rgb:'C8EEEE'}},
+    font:fnt(1,10,'0E5C5B'),
+    alignment:aln('center','center'),
+    border:bAll('A7D7D6')
+  },
+  // ── Số liệu đỏ (nghi vấn, cảnh báo)
+  numRed: {
+    fill:{fgColor:{rgb:C.RED_LT}},
+    font:fnt(1,10,C.RED),
+    alignment:aln('center','center'),
+    border:bAll('F5B7B1')
+  },
+  numRedStripe: {
+    fill:{fgColor:{rgb:'FADADD'}},
+    font:fnt(1,10,C.RED),
+    alignment:aln('center','center'),
+    border:bAll('F5B7B1')
+  },
+  // ── Dòng tổng cộng (vàng đậm)
+  total: {
+    fill:{fgColor:{rgb:C.GOLD_BG}},
+    font:fnt(1,10,C.GOLD),
+    alignment:aln('center','center'),
+    border:bFull(bMed('D4AC0D'),bMed('D4AC0D'),bThin(),bThin())
+  },
+  totalL: {
+    fill:{fgColor:{rgb:C.GOLD_BG}},
+    font:fnt(1,11,C.GOLD),
+    alignment:aln('left','center'),
+    border:bFull(bMed('D4AC0D'),bMed('D4AC0D'),bThin(),bThin())
+  },
+  // ── Ô đặc biệt: tỷ lệ đạt (xanh lá)
+  pctGood: {
+    fill:{fgColor:{rgb:C.GREEN_LT}},
+    font:fnt(1,10,C.GREEN),
+    alignment:aln('center','center'),
+    border:bAll('81C784')
+  },
+  // ── Ô đặc biệt: tỷ lệ kém (đỏ)
+  pctBad: {
+    fill:{fgColor:{rgb:C.RED_LT}},
+    font:fnt(1,10,C.RED),
+    alignment:aln('center','center'),
+    border:bAll('EF9A9A')
+  },
+  // ── Ô ngày hoạt động (vàng nhạt)
+  numGold: {
+    fill:{fgColor:{rgb:C.GOLD_LT}},
+    font:fnt(1,10,C.GOLD),
+    alignment:aln('center','center'),
+    border:bAll('F9E79F')
+  },
+  // ── Cảnh báo đỏ
+  alertRed: {
+    fill:{fgColor:{rgb:'C0392B'}},
+    font:fnt(1,10,C.WHITE),
+    alignment:aln('center','center',true),
+    border:bAll('922B21')
+  },
+  // ── Cảnh báo cam
+  alertOrange: {
+    fill:{fgColor:{rgb:'D35400'}},
+    font:fnt(1,10,C.WHITE),
+    alignment:aln('center','center',true),
+    border:bAll('A04000')
+  },
+  // ── Cảnh báo vàng
+  alertYellow: {
+    fill:{fgColor:{rgb:'D4AC0D'}},
+    font:fnt(1,10,C.WHITE),
+    alignment:aln('center','center',true),
+    border:bAll('9A7D0A')
+  },
+};
+
+// Áp dụng style tự động cho sheet
+// headerRows = số dòng header (không style data)
+// dataStart  = row index đầu tiên của data
+// numCols    = số cột
+// rows       = mảng dòng data thực tế (để detect tổng, màu xen kẽ)
+function applySheetStyle(ws, cfg) {
+  const {
+    numCols,
+    unitRows  = [],    // [{row, span}] — dòng tên đơn vị (navy)
+    titleRows = [],    // [{row, span}] — dòng tiêu đề (teal)
+    subRows   = [],    // [{row, span}] — dòng phụ (xanh nhạt)
+    hdrRows   = [],    // [{row, span}] — dòng header cột (navy)
+    hdrSubRows= [],    // [{row, span}] — dòng header phụ
+    idxRows   = [],    // [{row}]       — dòng số (1)(2)(3)
+    dataRows  = [],    // [{row, isTotal, leftCols, tealCols, redCols, goldCols, pctCol}]
+  } = cfg;
+
+  unitRows.forEach(({row,span})   => _styleRange(ws,row,0,row,(span||numCols)-1,XS.unitTop));
+  titleRows.forEach(({row,span})  => _styleRange(ws,row,0,row,(span||numCols)-1,XS.titleRow));
+  subRows.forEach(({row,span})    => _styleRange(ws,row,0,row,(span||numCols)-1,XS.subTitle));
+  hdrRows.forEach(({row,span})    => _styleRange(ws,row,0,row,(span||numCols)-1,XS.colHdr));
+  hdrSubRows.forEach(({row,span}) => _styleRange(ws,row,0,row,(span||numCols)-1,XS.colHdrSub));
+  idxRows.forEach(({row})         => _styleRange(ws,row,0,row,numCols-1,XS.colIdx));
+
+  dataRows.forEach(({row,isTotal,leftCols=[],tealCols=[],redCols=[],goldCols=[],pctCol,stripe}) => {
+    for (let c = 0; c < numCols; c++) {
+      let st;
+      if (isTotal) {
+        st = leftCols.includes(c) ? XS.totalL : XS.total;
+      } else if (goldCols.includes(c)) {
+        st = XS.numGold;
+      } else if (redCols.includes(c)) {
+        st = stripe ? XS.numRedStripe  : XS.numRed;
+      } else if (tealCols.includes(c)) {
+        st = stripe ? XS.numTealStripe : XS.numTeal;
+      } else if (pctCol === c) {
+        // tự detect % xem tốt/xấu
+        const addr = XLSX.utils.encode_cell({r:row,c});
+        const val  = ws[addr]?.v;
+        const pct  = parseFloat(String(val).replace('%',''));
+        st = isNaN(pct) ? (stripe?XS.dataStripe:XS.data)
+           : pct>=100 ? XS.pctGood : pct>=70 ? XS.numGold : XS.pctBad;
+      } else if (leftCols.includes(c)) {
+        st = stripe ? XS.dataStripeL : XS.dataL;
+      } else {
+        st = stripe ? XS.dataStripe  : XS.data;
+      }
+      _applyStyle(ws, row, c, st);
+    }
+  });
+}
+
+// Helper: tự build dataRows cho vùng data liên tục
+function buildDataRows(startRow, count, numCols, opts={}) {
+  const {leftCols=[],tealCols=[],redCols=[],goldCols=[],pctCol,totalAtLast=false} = opts;
+  return Array.from({length:count},(_,i)=>({
+    row: startRow+i,
+    isTotal: totalAtLast && i===count-1,
+    leftCols, tealCols, redCols, goldCols, pctCol,
+    stripe: i%2===1
+  }));
+}
+
+
+
   if (!reportData && qlrrData.length === 0) {
     showToast('Vui lòng tạo báo cáo trước', true); return;
   }
@@ -2974,8 +3230,28 @@ function exportExcel() {
   const ngayLap   = new Date().toLocaleDateString('vi-VN');
 
   const { tonghop, tong, dsList } = reportData || {};
-  const cl = tonghop?.['Cát Lái + Giang Nam'] || {};
-  const sp = tonghop?.['SPITC'] || {};
+  // Lấy dữ liệu theo id — tương thích cả cũ lẫn mới
+  const _getPortEx = (id) => {
+    if (tonghop?.[id]) return tonghop[id];
+    // fallback: tổng các cảng không phải SPITC cho CL
+    if (id === 'CAT_LAI' && tonghop) {
+      const vals = Object.entries(tonghop).filter(([k])=>k!=='SPITC'&&k!=='__TONG__').map(([,v])=>v);
+      if (vals.length) return {
+        tonDau: vals.reduce((a,v)=>a+(v.tonDau||0),0),
+        luaChon: vals.reduce((a,v)=>a+(v.luaChon||0),0),
+        tile: vals[0]?.tile||'0%', luyCont: vals.reduce((a,v)=>a+(v.luyCont||0),0),
+        daSoi: vals.reduce((a,v)=>a+(v.daSoi||0),0), nghiVan: vals.reduce((a,v)=>a+(v.nghiVan||0),0),
+        luyDaSoi: vals.reduce((a,v)=>a+(v.luyDaSoi||0),0), luyNghiVan: vals.reduce((a,v)=>a+(v.luyNghiVan||0),0),
+        tonCuoi: vals.reduce((a,v)=>a+(v.tonCuoi||0),0),
+        name: vals[0]?.name || 'Cát Lái + Giang Nam'
+      };
+    }
+    return {};
+  };
+  const cl = _getPortEx('CAT_LAI');
+  const sp = _getPortEx('SPITC');
+  const clName = cl.name || getPortGroupName('CAT_LAI');
+  const spName = sp.name || getPortGroupName('SPITC');
 
   const contCangMap = {}, contDonViMap = {};
   for (const c of qlrrData) {
@@ -2999,9 +3275,9 @@ function exportExcel() {
     [],
     ['Cảng','Tồn đầu kỳ','Lựa chọn ngày','Tỷ lệ % ĐM','Lũy kế đã chọn',
      'Đã soi ngày','Nghi vấn ngày','Lũy kế đã soi','Lũy kế nghi vấn','Tồn cuối kỳ'],
-    ['Cát Lái + Giang Nam',cl.tonDau||0,cl.luaChon||0,cl.tile||'0%',cl.luyCont||0,
+    [clName,cl.tonDau||0,cl.luaChon||0,cl.tile||'0%',cl.luyCont||0,
      cl.daSoi||0,cl.nghiVan||0,cl.luyDaSoi||0,cl.luyNghiVan||0,cl.tonCuoi||0],
-    ['SP-ITC',sp.tonDau||0,sp.luaChon||0,sp.tile||'0%',sp.luyCont||0,
+    [spName,sp.tonDau||0,sp.luaChon||0,sp.tile||'0%',sp.luyCont||0,
      sp.daSoi||0,sp.nghiVan||0,sp.luyDaSoi||0,sp.luyNghiVan||0,sp.tonCuoi||0],
     ['TỔNG CỘNG',tong?.tonDau||0,tong?.luaChon||0,tong?.tile||'0%',tong?.luyCont||0,
      tong?.daSoi||0,tong?.nghiVan||0,tong?.luyDaSoi||0,tong?.luyNghiVan||0,tong?.tonCuoi||0],
@@ -3015,6 +3291,16 @@ function exportExcel() {
     {s:{r:3,c:0},e:{r:3,c:9}},{s:{r:4,c:0},e:{r:4,c:9}},
   ];
   XLSX.utils.book_append_sheet(wb, ws1, '📊 Tổng hợp');
+  applySheetStyle(ws1, {
+    numCols:10,
+    unitRows:  [{row:0},{row:1}],
+    titleRows: [{row:3}],
+    subRows:   [{row:4}],
+    hdrRows:   [{row:6}],
+    dataRows: buildDataRows(7, 4, 10, {
+      leftCols:[0], tealCols:[5,7], redCols:[6,8], pctCol:3, totalAtLast:true
+    })
+  });
 
   // ── Sheet 2: DS CONT LỰA CHỌN ──
   const s2 = [
@@ -3033,27 +3319,21 @@ function exportExcel() {
   ws2['!cols'] = [5,22,18,20,16].map(w=>({wch:w}));
   ws2['!merges'] = [{s:{r:0,c:0},e:{r:0,c:4}},{s:{r:1,c:0},e:{r:1,c:4}}];
   XLSX.utils.book_append_sheet(wb, ws2, '📋 DS cont lựa chọn');
+  applySheetStyle(ws2, {
+    numCols:5,
+    unitRows: [{row:0}], titleRows: [{row:1}], hdrRows: [{row:3}],
+    dataRows: buildDataRows(4, lcNgay.length, 5, {leftCols:[1,2,3], tealCols:[0,4]})
+  });
 
-  // ── Sheet 3: DS CONT ĐÃ SOI ──
-  const s3 = [
-    ['CHI CỤC HẢI QUAN KHU VỰC II — HẢI QUAN CỬA KHẨU CẢNG SÀI GÒN KHU VỰC 1'],
-    [`DANH SÁCH CONT ĐÃ SOI CHIẾU NGÀY ${ngayBC}  (Tổng: ${soiList.length} cont)`],
-    [],
-    ['STT','Số Container','Cảng','Đơn vị','Ngày giờ soi','Người soi chiếu','Người nhập YC','Kết quả'],
-    ...soiList.map((d,i) => [
-      i+1, d.cont,
-      contCangMap[d.cont] || d.cangBC || '',
-      contDonViMap[d.cont] || d.nguoiNhap || 'KV1',
-      d.ngaySoi || '',
-      d.nguoiSoi || '',
-      d.nguoiNhap || '',
-      d.ketQua?.includes('Có nghi vấn') ? 'Có nghi vấn' : 'Không nghi vấn'
-    ])
-  ];
   const ws3 = XLSX.utils.aoa_to_sheet(s3);
   ws3['!cols'] = [5,20,16,16,20,20,18,18].map(w=>({wch:w}));
   ws3['!merges'] = [{s:{r:0,c:0},e:{r:0,c:7}},{s:{r:1,c:0},e:{r:1,c:7}}];
   XLSX.utils.book_append_sheet(wb, ws3, '✅ DS cont đã soi');
+  applySheetStyle(ws3, {
+    numCols:8,
+    unitRows: [{row:0}], titleRows: [{row:1}], hdrRows: [{row:3}],
+    dataRows: buildDataRows(4, soiList.length, 8, {leftCols:[1,2,3,4,5,6], tealCols:[0], redCols:[7]})
+  });
 
   XLSX.writeFile(wb, `BaoCaoSoiChieu_${ngayStr}.xlsx`);
   showToast('✅ Đã xuất Excel báo cáo ngày thành công!');
@@ -3490,14 +3770,36 @@ function exportCanhBao() {
   wsTH['!cols'] = [32,14,12,16,16,18].map(w=>({wch:w}));
   wsTH['!merges'] = [{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}}];
   XLSX.utils.book_append_sheet(wb, wsTH, '📊 Tổng hợp');
+  applySheetStyle(wsTH, {
+    numCols:6,
+    unitRows:[{row:0}], titleRows:[{row:1}], hdrRows:[{row:3},{row:9}],
+    dataRows:[
+      {row:4, leftCols:[0], redCols:[1], tealCols:[2]},
+      {row:5, leftCols:[0], redCols:[1], tealCols:[2], stripe:true},
+      {row:6, leftCols:[0], redCols:[1], tealCols:[2]},
+      {row:7, isTotal:true, leftCols:[0]},
+      ...buildDataRows(10, cangs.length, 6, {leftCols:[0], tealCols:[1], redCols:[2,3,4]})
+    ]
+  });
 
-  // 3 sheet chi tiết
+  // 3 sheet chi tiết — gán thêm style sau makeSheet
   makeSheet('🔴 Đỏ – Rất khẩn cấp', do_,
     '🔴 CONTAINER CHƯA SOI MỨC ĐỘ ĐỎ – RẤT KHẨN CẤP (TRÊN 10 NGÀY)');
+  const wsDo = wb.Sheets['🔴 Đỏ – Rất khẩn cấp'];
+  if(wsDo) applySheetStyle(wsDo,{numCols:9,unitRows:[{row:0}],titleRows:[{row:1}],hdrRows:[{row:3}],
+    dataRows:buildDataRows(4,do_.length,9,{leftCols:[1,2,3,7,8],tealCols:[4,5],redCols:[6]})});
+
   makeSheet('🟠 Cam – Khẩn cấp', cam,
     '🟠 CONTAINER CHƯA SOI MỨC ĐỘ CAM – KHẨN CẤP (6-10 NGÀY)');
+  const wsCam = wb.Sheets['🟠 Cam – Khẩn cấp'];
+  if(wsCam) applySheetStyle(wsCam,{numCols:9,unitRows:[{row:0}],titleRows:[{row:1}],hdrRows:[{row:3}],
+    dataRows:buildDataRows(4,cam.length,9,{leftCols:[1,2,3,7,8],tealCols:[4,5],redCols:[6]})});
+
   makeSheet('🟡 Vàng – Cần chú ý', vang,
     '🟡 CONTAINER CHƯA SOI MỨC ĐỘ VÀNG – CẦN CHÚ Ý (3-5 NGÀY)');
+  const wsVang = wb.Sheets['🟡 Vàng – Cần chú ý'];
+  if(wsVang) applySheetStyle(wsVang,{numCols:9,unitRows:[{row:0}],titleRows:[{row:1}],hdrRows:[{row:3}],
+    dataRows:buildDataRows(4,vang.length,9,{leftCols:[1,2,3,7,8],tealCols:[4,5],goldCols:[6]})});
 
   const fname = `CanhBao_ChuaSoi_${ngayStr.replace(/\//g,'-')}.xlsx`;
   XLSX.writeFile(wb, fname);
@@ -3509,10 +3811,34 @@ function exportQLRR() {
   if (!reportData) { showToast('Vui lòng tạo báo cáo trước', true); return; }
 
   const { tonghop, tong, fromD, dsList } = reportData;
-  const ngayBC = fromD.toLocaleDateString('vi-VN');
+  const ngayBC  = fromD.toLocaleDateString('vi-VN');
   const ngayLap = new Date().toLocaleDateString('vi-VN');
-  const cl = tonghop['Cát Lái + Giang Nam'];
-  const sp = tonghop['SPITC'];
+
+  // Lấy số liệu theo id cảng — tổng hợp các cảng không phải SPITC vào nhóm CL
+  const getPortData = (portId) => {
+    // Thử lấy trực tiếp theo id
+    if (tonghop[portId]) return tonghop[portId];
+    // Fallback: tổng hợp tất cả cảng không phải SPITC
+    if (portId === 'CAT_LAI' || portId === 'Cát Lái + Giang Nam') {
+      const nonSP = Object.entries(tonghop)
+        .filter(([k]) => k !== 'SPITC' && k !== '__TONG__')
+        .map(([, v]) => v);
+      if (nonSP.length === 0) return {};
+      return {
+        daSoi: nonSP.reduce((a,v) => a+(v.daSoi||0), 0),
+        nghiVan: nonSP.reduce((a,v) => a+(v.nghiVan||0), 0),
+        luyDaSoi: nonSP.reduce((a,v) => a+(v.luyDaSoi||0), 0),
+        luyNghiVan: nonSP.reduce((a,v) => a+(v.luyNghiVan||0), 0),
+        name: nonSP[0]?.name || 'Cát Lái + Giang Nam'
+      };
+    }
+    return {};
+  };
+
+  const cl = getPortData('CAT_LAI');
+  const sp = getPortData('SPITC');
+  const clName = cl.name || getPortGroupName('CAT_LAI');
+  const spName = sp.name || getPortGroupName('SPITC');
 
   // Danh sách cont đã soi trong ngày (cho sheet 2)
   const contCangMap = {};
@@ -3572,12 +3898,12 @@ function exportQLRR() {
      'Số lượng container\nphát hiện vi phạm\n(-8)', ''],
     ['', '', '', '', '', '', '', '', '', ''], // row 3 (merged)
     // Data: Cát Lái + Giang Nam (4 dòng)
-    ['1', 'Cát Lái + Giang Nam', 'Soi trước (nhập khẩu)', cl.daSoi, cl.nghiVan, 0, cl.luyDaSoi, cl.luyNghiVan, 0, ''],
+    ['1', clName, 'Soi trước (nhập khẩu)', cl.daSoi||0, cl.nghiVan||0, 0, cl.luyDaSoi||0, cl.luyNghiVan||0, 0, ''],
     ['', '', 'Soi trong (nhập khẩu)', '', '', 0, '', '', 0, ''],
     ['', '', 'Soi hàng XK', '', '', 0, '', '', 0, ''],
     ['', '', 'Soi hàng quá 30 ngày', '', '', 0, '', '', 0, ''],
-    // Data: SP-ITC (4 dòng — đồng bộ với Cát Lái)
-    ['2', 'SP-ITC', 'Soi trước (nhập khẩu)', sp.daSoi, sp.nghiVan, 0, sp.luyDaSoi, sp.luyNghiVan, 0, ''],
+    // Data: SP-ITC (4 dòng)
+    ['2', spName, 'Soi trước (nhập khẩu)', sp.daSoi||0, sp.nghiVan||0, 0, sp.luyDaSoi||0, sp.luyNghiVan||0, 0, ''],
     ['', '', 'Soi trong (nhập khẩu)', '', '', 0, '', '', 0, ''],
     ['', '', 'Soi hàng XK', '', '', 0, '', '', 0, ''],
     ['', '', 'Soi hàng quá 30 ngày', '', '', 0, '', '', 0, ''],
@@ -3614,11 +3940,21 @@ function exportQLRR() {
     {s:{r:30,c:0},e:{r:30,c:4}},{s:{r:30,c:5},e:{r:30,c:9}},
   ];
 
-  addSheet('1-QLRR', s1rows, s1merges,
+  const ws1q = addSheet('1-QLRR', s1rows, s1merges,
     [6,26,24,20,20,18,20,20,18,12],
     [{hpt:18},{hpt:20},{hpt:18},{hpt:10},{hpt:26},{hpt:20},{hpt:15},{hpt:10},{hpt:16},
      {hpt:46},{hpt:46},{hpt:0},{hpt:22},{hpt:20},{hpt:20},{hpt:20},{hpt:22},{hpt:20},
      {hpt:24},{hpt:10},{hpt:16},{hpt:20},{hpt:20},{hpt:10},{hpt:18},{hpt:15}]);
+  applySheetStyle(ws1q,{numCols:10,
+    unitRows:[{row:1},{row:2}], titleRows:[{row:4}], subRows:[{row:5},{row:6}],
+    hdrRows:[{row:9},{row:10}], idxRows:[{row:12}],
+    dataRows:[
+      ...buildDataRows(13,4,10,{leftCols:[1,2],tealCols:[3,6],redCols:[4,7],totalAtLast:false}),
+      {row:17,isTotal:true,leftCols:[1,2]},
+      ...buildDataRows(18,6,10,{leftCols:[1,2],tealCols:[3,6],redCols:[4,7]}),
+      {row:24,isTotal:true,leftCols:[1,2]},
+    ]
+  });
 
   // ════════════════════════════════════════════
   // SHEET 2/QLRR — NK Xếp dỡ — đầy đủ dữ liệu
@@ -3801,10 +4137,15 @@ function exportQLRR() {
     {s:{r:10,c:17},e:{r:11,c:17}},{s:{r:10,c:18},e:{r:11,c:18}},
   ];
 
-  addSheet('2-QLRR', s2rows, s2merges,
+  const ws2q = addSheet('2-QLRR', s2rows, s2merges,
     [4,18,8,14,16,12,14,18,14,22,24,16,26,14,14,14,12,12,12,20,14,12],
     [{hpt:16},{hpt:20},{hpt:18},{hpt:10},{hpt:24},{hpt:20},{hpt:15},{hpt:10},{hpt:16},
      {hpt:40},{hpt:40},{hpt:0}]);
+  applySheetStyle(ws2q,{numCols:22,
+    unitRows:[{row:1},{row:2}],titleRows:[{row:4}],subRows:[{row:5},{row:6}],
+    hdrRows:[{row:9},{row:10}],idxRows:[{row:11}],
+    dataRows:buildDataRows(12,dsSoi.length+2,22,{leftCols:[1],tealCols:[3,4,5,8,9,10],redCols:[19,20,21],totalAtLast:true})
+  });
 
   // ════════════════════════════════════════════
   // SHEET 3/QLRR — NK Thông quan (blank template)
@@ -3854,16 +4195,44 @@ function exportQLRR() {
     ['(Ký, ghi rõ họ tên)', '', '', '', '', '', '', '(Ký tên, đóng dấu)'],
   ];
 
-  addSheet('3-QLRR', s3rows, [
+  const ws3q = addSheet('3-QLRR', s3rows, [
     {s:{r:0,c:0},e:{r:0,c:21}},{s:{r:1,c:0},e:{r:1,c:21}},{s:{r:2,c:0},e:{r:2,c:21}},
     {s:{r:4,c:0},e:{r:4,c:21}},{s:{r:5,c:0},e:{r:5,c:21}},{s:{r:6,c:0},e:{r:6,c:21}},
     {s:{r:8,c:0},e:{r:8,c:21}},
   ], [4,20,16,12,14,14,12,12,12,20,16,12,18,14,16,14,14,14,12,12,12,10],
   [{hpt:16},{hpt:20},{hpt:18},{hpt:10},{hpt:24},{hpt:20},{hpt:15}]);
+  applySheetStyle(ws3q,{numCols:22,
+    unitRows:[{row:1},{row:2}],titleRows:[{row:4}],subRows:[{row:5},{row:6}],hdrRows:[{row:9},{row:10}],
+    dataRows:buildDataRows(12,5,22,{leftCols:[1,2],tealCols:[3,4],redCols:[14,15]})
+  });
 
-  // ════════════════════════════════════════════
-  // SHEET 4/QLRR — Xuất khẩu (blank template)
-  // ════════════════════════════════════════════
+  const ws4q = addSheet('4-QLRR', s4rows, [
+    {s:{r:0,c:0},e:{r:0,c:21}},{s:{r:1,c:0},e:{r:1,c:21}},{s:{r:2,c:0},e:{r:2,c:21}},
+    {s:{r:4,c:0},e:{r:4,c:21}},{s:{r:5,c:0},e:{r:5,c:21}},{s:{r:6,c:0},e:{r:6,c:21}},
+    {s:{r:8,c:0},e:{r:8,c:21}},
+  ], [4,18,12,14,12,12,16,10,10,18,14,14,20,18,14,22,16,14,14,12,16,12],
+  [{hpt:16},{hpt:20},{hpt:18}]);
+  applySheetStyle(ws4q,{numCols:22,
+    unitRows:[{row:1},{row:2}],titleRows:[{row:4}],subRows:[{row:5},{row:6}],hdrRows:[{row:9},{row:10}],
+    dataRows:buildDataRows(12,5,22,{leftCols:[1,2,6],redCols:[14,15]})
+  });
+
+  const ws5q = addSheet('5-QLRR', s5rows, [
+    {s:{r:0,c:0},e:{r:0,c:18}},{s:{r:1,c:0},e:{r:1,c:18}},{s:{r:2,c:0},e:{r:2,c:18}},
+    {s:{r:4,c:0},e:{r:4,c:18}},{s:{r:5,c:0},e:{r:5,c:18}},{s:{r:6,c:0},e:{r:6,c:18}},
+    {s:{r:8,c:0},e:{r:8,c:18}},
+    {s:{r:9,c:0},e:{r:10,c:0}},{s:{r:9,c:1},e:{r:10,c:1}},{s:{r:9,c:2},e:{r:10,c:2}},
+    {s:{r:9,c:3},e:{r:10,c:3}},{s:{r:9,c:4},e:{r:10,c:4}},{s:{r:9,c:5},e:{r:10,c:5}},
+    {s:{r:9,c:6},e:{r:10,c:6}},{s:{r:9,c:7},e:{r:10,c:7}},{s:{r:9,c:8},e:{r:10,c:8}},
+    {s:{r:9,c:9},e:{r:10,c:9}},{s:{r:9,c:10},e:{r:10,c:10}},
+    {s:{r:9,c:11},e:{r:9,c:12}},{s:{r:9,c:13},e:{r:10,c:13}},
+    {s:{r:9,c:14},e:{r:9,c:16}},{s:{r:9,c:17},e:{r:10,c:17}},{s:{r:9,c:18},e:{r:10,c:18}},
+  ], [4,12,10,18,8,20,18,10,22,18,12,22,16,14,18,14,14,14,12],
+  [{hpt:16},{hpt:20},{hpt:18}]);
+  applySheetStyle(ws5q,{numCols:19,
+    unitRows:[{row:1},{row:2}],titleRows:[{row:4}],subRows:[{row:5},{row:6}],hdrRows:[{row:9},{row:10}],
+    dataRows:buildDataRows(12,5,19,{leftCols:[1,5,6],tealCols:[3,4],redCols:[11,15]})
+  });
   const s4rows = [
     ['Biểu mẫu số 04/QLRR: Báo cáo kết quả soi chiếu hàng hóa xuất khẩu theo từng máy soi tại địa bàn theo ngày'],
     [DON_VI_TREN],[DON_VI_DUOI],[],
@@ -3896,15 +4265,8 @@ function exportQLRR() {
     ['(Ký, ghi rõ họ tên)','','','','','','(Ký tên, đóng dấu)'],
   ];
 
-  addSheet('4-QLRR', s4rows, [
-    {s:{r:0,c:0},e:{r:0,c:21}},{s:{r:1,c:0},e:{r:1,c:21}},{s:{r:2,c:0},e:{r:2,c:21}},
-    {s:{r:4,c:0},e:{r:4,c:21}},{s:{r:5,c:0},e:{r:5,c:21}},{s:{r:6,c:0},e:{r:6,c:21}},
-    {s:{r:8,c:0},e:{r:8,c:21}},
-  ], [4,18,12,14,12,12,16,10,10,18,14,14,20,18,14,22,16,14,14,12,16,12],
-  [{hpt:16},{hpt:20},{hpt:18}]);
-
   // ════════════════════════════════════════════
-  // SHEET 5/QLRR — Hàng tồn > 30 ngày (blank)
+  // SHEET 4/QLRR — Xuất khẩu (blank template)
   // ════════════════════════════════════════════
   const s5rows = [
     ['Biểu mẫu số 05/QLRR: Báo cáo kết quả soi chiếu hàng hóa tồn tại cảng từng máy soi tại địa bàn theo ngày'],
@@ -3944,19 +4306,6 @@ function exportQLRR() {
     [`Lập báo cáo ngày ${ngayBC}`,'','','','','','CHI CỤC TRƯỞNG'],
     ['(Ký, ghi rõ họ tên)','','','','','','(Ký tên, đóng dấu)'],
   ];
-
-  addSheet('5-QLRR', s5rows, [
-    {s:{r:0,c:0},e:{r:0,c:18}},{s:{r:1,c:0},e:{r:1,c:18}},{s:{r:2,c:0},e:{r:2,c:18}},
-    {s:{r:4,c:0},e:{r:4,c:18}},{s:{r:5,c:0},e:{r:5,c:18}},{s:{r:6,c:0},e:{r:6,c:18}},
-    {s:{r:8,c:0},e:{r:8,c:18}},
-    {s:{r:9,c:0},e:{r:10,c:0}},{s:{r:9,c:1},e:{r:10,c:1}},{s:{r:9,c:2},e:{r:10,c:2}},
-    {s:{r:9,c:3},e:{r:10,c:3}},{s:{r:9,c:4},e:{r:10,c:4}},{s:{r:9,c:5},e:{r:10,c:5}},
-    {s:{r:9,c:6},e:{r:10,c:6}},{s:{r:9,c:7},e:{r:10,c:7}},{s:{r:9,c:8},e:{r:10,c:8}},
-    {s:{r:9,c:9},e:{r:10,c:9}},{s:{r:9,c:10},e:{r:10,c:10}},
-    {s:{r:9,c:11},e:{r:9,c:12}},{s:{r:9,c:13},e:{r:10,c:13}},
-    {s:{r:9,c:14},e:{r:9,c:16}},{s:{r:9,c:17},e:{r:10,c:17}},{s:{r:9,c:18},e:{r:10,c:18}},
-  ], [4,12,10,18,8,20,18,10,22,18,12,22,16,14,18,14,14,14,12],
-  [{hpt:16},{hpt:20},{hpt:18}]);
 
   // Download
   const ngayStr = fromD.toLocaleDateString('vi-VN').replace(/\//g,'-');
@@ -4148,6 +4497,11 @@ function exportBaoCaoDonVi() {
     {s:{r:2,c:0},e:{r:2,c:11}},
   ];
   XLSX.utils.book_append_sheet(wb, ws1, 'tong_hop');
+  applySheetStyle(ws1,{numCols:12,
+    unitRows:[{row:0},{row:1}],titleRows:[{row:3}],subRows:[{row:4}],
+    hdrRows:[{row:6},{row:7}],idxRows:[{row:8}],
+    dataRows:buildDataRows(9, 5, 12, {leftCols:[0,1,2], tealCols:[3,6,7,10], redCols:[4,8], goldCols:[5,9,11], pctCol:5, totalAtLast:true})
+  });
 
   // ── SHEET 2: DS CONT LỰA CHỌN ──
   const lcAll = dasoiData.filter(d => d.nhapDate && d.nhapDate >= tuD && d.nhapDate <= denD);
@@ -4167,26 +4521,19 @@ function exportBaoCaoDonVi() {
   ws2['!cols'] = [5,20,18,12,16].map(w=>({wch:w}));
   ws2['!merges'] = [{s:{r:0,c:0},e:{r:0,c:4}},{s:{r:1,c:0},e:{r:1,c:4}}];
   XLSX.utils.book_append_sheet(wb, ws2, 'DS cont lựa chọn');
+  applySheetStyle(ws2,{numCols:5,
+    unitRows:[{row:0}],titleRows:[{row:1}],hdrRows:[{row:3}],
+    dataRows:buildDataRows(4,lcNgayDV?.length||0,5,{leftCols:[1,2,3],tealCols:[0,4]})
+  });
 
-  // ── SHEET 3: DS CONT ĐÃ SOI ──
-  const soiAll = dasoiData.filter(d => d.daSoi && d.soiDate && d.soiDate >= tuD && d.soiDate <= denD);
-  const s3 = [
-    ['CHI CỤC HẢI QUAN KHU VỰC II — HẢI QUAN CỬA KHẨU CẢNG SÀI GÒN KHU VỰC 1'],
-    [`DANH SÁCH CONT ĐÃ SOI CHIẾU — Kỳ: ${ngayBC} — Tổng: ${soiAll.length} cont`],
-    [],
-    ['STT', 'Số cont', 'Cảng dỡ hàng (cảng đích)', 'Đơn vị đề nghị', 'Nghi vấn/Không nghi vấn', 'Ngày soi'],
-    ...soiAll.map((d,i) => [
-      i+1, d.cont,
-      contCangMap[d.cont] || 'Cát Lái',
-      getDonVi(contDonViMap[d.cont] || d.nguoiNhap || ''),
-      d.ketQua && d.ketQua.includes('Có nghi vấn') ? 'Có nghi vấn' : 'Không nghi vấn',
-      d.ngaySoi || ''
-    ])
-  ];
   const ws3 = XLSX.utils.aoa_to_sheet(s3);
   ws3['!cols'] = [5,20,18,12,18,18].map(w=>({wch:w}));
   ws3['!merges'] = [{s:{r:0,c:0},e:{r:0,c:5}},{s:{r:1,c:0},e:{r:1,c:5}}];
   XLSX.utils.book_append_sheet(wb, ws3, 'DS cont đã soi');
+  applySheetStyle(ws3,{numCols:6,
+    unitRows:[{row:0}],titleRows:[{row:1}],hdrRows:[{row:3}],
+    dataRows:buildDataRows(4,soiAll.length,6,{leftCols:[1,2,3,5],tealCols:[0],redCols:[4]})
+  });
 
   const ngayStr = fmtVN(tuNgay).replace(/\//g,'-');
   XLSX.writeFile(wb, 'BaoCao_DonVi_' + ngayStr + '.xlsx');
