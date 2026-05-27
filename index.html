@@ -1257,74 +1257,210 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ── HASH mật khẩu (SHA-256 đơn giản qua Web Crypto) ──
 // ═══════════════════════════════════════════════
 // BẢO MẬT — ĐĂNG NHẬP
 // ═══════════════════════════════════════════════
-// ─── localStorage safe wrapper (Edge/Safari chặn khi mở file://) ───
 const LS = {
   _mem: {},
-  get(k) { try { return localStorage.getItem(k); } catch { return this._mem[k]||null; } },
-  set(k,v) { try { localStorage.setItem(k,v); } catch { this._mem[k]=v; } },
-  remove(k) { try { localStorage.removeItem(k); } catch { delete this._mem[k]; } }
+  get(k)    { try { return localStorage.getItem(k); }    catch { return this._mem[k]||null; } },
+  set(k,v)  { try { localStorage.setItem(k,v); }         catch { this._mem[k]=v; } },
+  remove(k) { try { localStorage.removeItem(k); }        catch { delete this._mem[k]; } }
 };
 
-const DEFAULT_PW  = 'HQ@KV1@2026';
-const PW_KEY      = 'scKV1_pw_h'; // _h = hashed
-const SESSION_KEY = 'scKV1_session';
+const DEFAULT_PW   = 'HQ@KV1@2026';
+const PW_KEY       = 'scKV1_pw2';    // key mới để tránh xung đột version cũ
+const SESSION_KEY  = 'scKV1_sess2';
 const MAX_ATTEMPTS = 5;
-const LOCK_MINUTES = 15;         // tăng từ 5 → 15 phút
-const SESSION_TIMEOUT = 8 * 3600 * 1000;   // 8 giờ (giảm từ 12)
-const IDLE_TIMEOUT    = 60 * 60 * 1000;    // 1 giờ không hoạt động → tự logout
+const LOCK_MINUTES = 15;
+const SESSION_TIMEOUT = 8 * 3600 * 1000;
+const IDLE_TIMEOUT    = 60 * 60 * 1000;
 
-let _sessionOK  = false;
+let _sessionOK = false;
 let _idleTimer  = null;
-let _resetCode  = null;  // mã xác nhận reset tạm thời
+let _resetCode  = null;
 
-// ── HASH mật khẩu (SHA-256 đơn giản qua Web Crypto) ──
-// ── HASH mật khẩu — dùng crypto.subtle nếu có, fallback đơn giản nếu không ──
-async function hashPw(pw) {
-  const salted = 'scKV1_salt_2026_' + String(pw).trim();
-  // Thử Web Crypto API trước
+// Hash đơn giản — hoạt động đồng bộ, không cần crypto.subtle
+function _simpleHash(str) {
+  const s = 'kv1_2026_' + str;
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761);
+    h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1>>>16), 2246822507) ^ Math.imul(h2 ^ (h2>>>13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2>>>16), 2246822507) ^ Math.imul(h1 ^ (h1>>>13), 3266489909);
+  return ((h2>>>0).toString(16).padStart(8,'0') + (h1>>>0).toString(16).padStart(8,'0'));
+}
+
+function _getStoredHash()    { return LS.get(PW_KEY) || _simpleHash(DEFAULT_PW); }
+function _checkPw(entered)   { return _simpleHash(entered.trim()) === _getStoredHash(); }
+function _savePwHash(newPw)  { LS.set(PW_KEY, _simpleHash(newPw.trim())); }
+
+// Audit log
+function writeLog(action, detail) {
   try {
-    if (typeof crypto !== 'undefined' && crypto.subtle) {
-      const enc  = new TextEncoder();
-      const buf  = await crypto.subtle.digest('SHA-256', enc.encode(salted));
-      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
-    }
+    const dev  = getDeviceInfo();
+    const logs = JSON.parse(LS.get('scKV1_log') || '[]');
+    logs.push({ t: new Date().toLocaleString('vi-VN'), ts: Date.now(),
+      action, detail, device: dev.device, os: dev.os, browser: dev.browser });
+    if (logs.length > 200) logs.splice(0, logs.length - 200);
+    LS.set('scKV1_log', JSON.stringify(logs));
   } catch(e) {}
-  // Fallback: hash đơn giản (djb2 mở rộng) — đủ dùng khi crypto.subtle không có
-  let h = 5381;
-  for (let i = 0; i < salted.length; i++) {
-    h = ((h << 5) + h) ^ salted.charCodeAt(i);
-    h = h & 0xFFFFFFFF;
-  }
-  // Thêm vòng thứ 2 để tăng độ phức tạp
-  let h2 = 0x811c9dc5;
-  for (let i = 0; i < salted.length; i++) {
-    h2 ^= salted.charCodeAt(i);
-    h2 = (h2 * 0x01000193) & 0xFFFFFFFF;
-  }
-  return (h >>> 0).toString(16).padStart(8,'0') + (h2 >>> 0).toString(16).padStart(8,'0');
 }
 
-async function getStoredHash() {
-  const stored = LS.get(PW_KEY);
-  if (!stored) return await hashPw(DEFAULT_PW);
-  // Kiểm tra hash có đúng độ dài không (SHA-256 = 64 chars, fallback = 16 chars)
-  // Nếu lưu SHA-256 (64 chars) nhưng giờ dùng fallback (16 chars) → xóa đi hash lại
-  const testHash = await hashPw('test');
-  if (stored.length !== testHash.length) {
-    LS.remove(PW_KEY); // xóa hash cũ không tương thích
-    return await hashPw(DEFAULT_PW);
-  }
-  return stored;
+// Lock
+function getLockInfo()      { try { return JSON.parse(LS.get('scKV1_lock')||'{}'); } catch { return {}; } }
+function setLockInfo(info)  { LS.set('scKV1_lock', JSON.stringify(info)); }
+function isLocked() {
+  const l = getLockInfo();
+  if (!l.until) return false;
+  if (Date.now() < l.until) return true;
+  LS.remove('scKV1_lock'); return false;
 }
 
-async function checkPw(entered) {
-  const h = await hashPw(entered);
-  const stored = await getStoredHash();
-  return h === stored;
+// Idle timeout
+function resetIdleTimer() {
+  clearTimeout(_idleTimer);
+  if (!_sessionOK) return;
+  _idleTimer = setTimeout(() => {
+    if (_sessionOK) { writeLog('AUTO_LOGOUT','Hết phiên idle'); _doLogoutSilent();
+      showToast('⏰ Tự đăng xuất do không hoạt động 1 giờ', true); }
+  }, IDLE_TIMEOUT);
 }
+['click','keydown','mousemove','touchstart','scroll'].forEach(ev =>
+  document.addEventListener(ev, resetIdleTimer, {passive:true}));
+
+function _doLogoutSilent() {
+  _sessionOK = false;
+  LS.remove(SESSION_KEY);
+  document.getElementById('loginScreen').style.display = 'flex';
+  setTimeout(() => { const i = document.getElementById('pwInput'); if(i){i.value='';i.focus();} }, 100);
+}
+
+// ── ĐĂNG NHẬP ──
+function doLogin() {
+  // Tự xóa khoá hết hạn
+  const lock = getLockInfo();
+  if (lock.until && Date.now() >= lock.until) LS.remove('scKV1_lock');
+
+  if (isLocked()) {
+    const l = getLockInfo();
+    const remain = Math.ceil((l.until - Date.now()) / 60000);
+    document.getElementById('loginLocked').textContent = `🔒 Bị khoá — còn ${remain} phút`;
+    document.getElementById('loginLocked').style.display = 'block';
+    return;
+  }
+
+  const entered = document.getElementById('pwInput').value;
+  if (!entered) {
+    document.getElementById('loginError').textContent = '❌ Vui lòng nhập mật khẩu';
+    document.getElementById('loginError').style.display = 'block'; return;
+  }
+
+  const ok = _checkPw(entered);
+  document.getElementById('pwInput').value = '';
+
+  if (ok) {
+    LS.remove('scKV1_lock');
+    LS.set(SESSION_KEY, JSON.stringify({ ts: Date.now() }));
+    _sessionOK = true;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('loginError').style.display  = 'none';
+    document.getElementById('loginLocked').style.display = 'none';
+    document.getElementById('loginAttempts').textContent = '';
+    document.getElementById('resetArea').style.display   = 'none';
+    resetIdleTimer();
+    writeLog('LOGIN_OK', 'Đăng nhập thành công');
+  } else {
+    const l2    = getLockInfo();
+    const attempts = (l2.attempts || 0) + 1;
+    writeLog('LOGIN_FAIL', `Sai lần ${attempts}`);
+    if (attempts >= MAX_ATTEMPTS) {
+      setLockInfo({ attempts, until: Date.now() + LOCK_MINUTES * 60000 });
+      document.getElementById('loginLocked').textContent =
+        `🔒 Sai ${MAX_ATTEMPTS} lần — khoá ${LOCK_MINUTES} phút`;
+      document.getElementById('loginLocked').style.display = 'block';
+      document.getElementById('loginError').style.display  = 'none';
+      _showResetArea();
+    } else {
+      setLockInfo({ attempts });
+      document.getElementById('loginError').textContent =
+        `❌ Sai mật khẩu — còn ${MAX_ATTEMPTS - attempts} lần thử`;
+      document.getElementById('loginError').style.display = 'block';
+      if (attempts >= 3) _showResetArea();
+    }
+  }
+}
+
+function _showResetArea() {
+  _resetCode = String(Math.floor(100000 + Math.random() * 900000));
+  document.getElementById('resetCode').textContent    = _resetCode;
+  document.getElementById('resetArea').style.display  = '';
+  document.getElementById('resetCodeInput').value     = '';
+}
+
+function doReset() {
+  if (!_resetCode || document.getElementById('resetCodeInput').value.trim() !== _resetCode) {
+    showToast('❌ Mã xác nhận không đúng', true);
+    document.getElementById('resetCodeInput').value = ''; return;
+  }
+  LS.remove('scKV1_lock'); LS.remove(PW_KEY); _resetCode = null;
+  document.getElementById('resetArea').style.display   = 'none';
+  document.getElementById('loginLocked').style.display = 'none';
+  document.getElementById('loginError').style.display  = 'none';
+  writeLog('RESET', 'Reset về mật khẩu mặc định');
+  showToast('✅ Đã reset — dùng mật khẩu mặc định để đăng nhập');
+}
+
+function doLogout() {
+  if (!confirm('Đăng xuất?')) return;
+  writeLog('LOGOUT', 'Đăng xuất thủ công');
+  clearTimeout(_idleTimer);
+  _doLogoutSilent();
+}
+
+function doChangePw() {
+  const old  = document.getElementById('pwOld').value;
+  const new1 = document.getElementById('pwNew1').value;
+  const new2 = document.getElementById('pwNew2').value;
+  const errEl = document.getElementById('changePwError');
+  if (!_checkPw(old))    { errEl.textContent='❌ Mật khẩu hiện tại không đúng'; errEl.style.display='block'; return; }
+  if (new1.length < 8)   { errEl.textContent='❌ Mật khẩu mới phải ≥8 ký tự';   errEl.style.display='block'; return; }
+  if (!/[A-Z]/.test(new1)){ errEl.textContent='❌ Cần ít nhất 1 chữ HOA';        errEl.style.display='block'; return; }
+  if (!/[0-9]/.test(new1)){ errEl.textContent='❌ Cần ít nhất 1 chữ số';         errEl.style.display='block'; return; }
+  if (new1 !== new2)     { errEl.textContent='❌ Mật khẩu mới không khớp';       errEl.style.display='block'; return; }
+  _savePwHash(new1);
+  document.getElementById('changePwModal').classList.remove('show');
+  ['pwOld','pwNew1','pwNew2'].forEach(id => document.getElementById(id).value = '');
+  errEl.style.display = 'none';
+  writeLog('CHANGE_PW', 'Đổi mật khẩu thành công');
+  showToast('✅ Đổi mật khẩu thành công!');
+}
+
+// GitHub token — lưu XOR đơn giản (không cần crypto.subtle)
+function _xorEncode(str) {
+  const k = 'scKV1_ghk_2026';
+  let out = '';
+  for (let i = 0; i < str.length; i++)
+    out += String.fromCharCode(str.charCodeAt(i) ^ k.charCodeAt(i % k.length));
+  try { return 'x2:' + btoa(out); } catch { return str; }
+}
+function _xorDecode(enc) {
+  try {
+    if (!enc.startsWith('x2:') && !enc.startsWith('xor:')) return enc; // plaintext cũ
+    const raw = atob(enc.startsWith('x2:') ? enc.slice(3) : enc.slice(4));
+    const k   = 'scKV1_ghk_2026';
+    let out   = '';
+    for (let i = 0; i < raw.length; i++)
+      out += String.fromCharCode(raw.charCodeAt(i) ^ k.charCodeAt(i % k.length));
+    return out;
+  } catch { return ''; }
+}
+
+async function getGHToken()       { const s = LS.get(GITHUB_TOKEN_KEY); if(!s) return ''; return _xorDecode(s); }
+async function saveGHToken(token) { LS.set(GITHUB_TOKEN_KEY, _xorEncode(token)); }
 
 // ── NHẬN DIỆN THIẾT BỊ ──
 function getDeviceInfo() {
@@ -1421,119 +1557,6 @@ function _doLogoutSilent() {
 );
 
 // ── ĐĂNG NHẬP ──
-async function doLogin() {
-  if (isLocked()) {
-    const lock = getLockInfo();
-    const remain = Math.ceil((lock.until - Date.now()) / 60000);
-    document.getElementById('loginLocked').textContent =
-      `🔒 Bị khoá ${remain} phút nữa`;
-    document.getElementById('loginLocked').style.display = 'block';
-    return;
-  }
-
-  const entered = document.getElementById('pwInput').value;
-  if (!entered) { document.getElementById('loginError').style.display = 'block'; return; }
-
-  const ok = await checkPw(entered);
-  document.getElementById('pwInput').value = '';
-
-  if (ok) {
-    LS.remove('scKV1_lock');
-    // Lưu session: hash(timestamp + userAgent) để không đoán được
-    const sessionToken = await hashPw(Date.now() + navigator.userAgent);
-    LS.set(SESSION_KEY, JSON.stringify({ token: sessionToken, ts: Date.now() }));
-    _sessionOK = true;
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('loginError').style.display = 'none';
-    document.getElementById('loginAttempts').textContent = '';
-    document.getElementById('resetArea').style.display = 'none';
-    resetIdleTimer();
-    writeLog('LOGIN_OK', 'Đăng nhập thành công');
-  } else {
-    const lock = getLockInfo();
-    const attempts = (lock.attempts || 0) + 1;
-    writeLog('LOGIN_FAIL', `Sai mật khẩu lần ${attempts}`);
-
-    if (attempts >= MAX_ATTEMPTS) {
-      const until = Date.now() + LOCK_MINUTES * 60 * 1000;
-      setLockInfo({ attempts, until });
-      writeLog('LOCKED', `Khoá ${LOCK_MINUTES} phút`);
-      document.getElementById('loginLocked').textContent =
-        `🔒 Sai quá ${MAX_ATTEMPTS} lần — khoá ${LOCK_MINUTES} phút`;
-      document.getElementById('loginLocked').style.display = 'block';
-      document.getElementById('loginError').style.display = 'none';
-      // Hiện khu vực reset có mã xác nhận
-      _showResetArea();
-    } else {
-      setLockInfo({ attempts });
-      const remain = MAX_ATTEMPTS - attempts;
-      document.getElementById('loginError').style.display = 'block';
-      document.getElementById('loginError').textContent =
-        `❌ Sai mật khẩu — còn ${remain} lần thử`;
-      document.getElementById('loginAttempts').textContent = '';
-      if (attempts >= 3) _showResetArea();
-    }
-  }
-}
-
-// ── RESET có mã xác nhận ──
-function _showResetArea() {
-  // Tạo mã 6 chữ số ngẫu nhiên
-  _resetCode = String(Math.floor(100000 + Math.random() * 900000));
-  document.getElementById('resetCode').textContent = _resetCode;
-  document.getElementById('resetArea').style.display = '';
-  document.getElementById('resetCodeInput').value = '';
-}
-
-function doReset() {
-  const entered = document.getElementById('resetCodeInput').value.trim();
-  if (!_resetCode || entered !== _resetCode) {
-    showToast('❌ Mã xác nhận không đúng', true);
-    document.getElementById('resetCodeInput').value = '';
-    return;
-  }
-  // Reset thành công
-  LS.remove('scKV1_lock');
-  LS.remove(PW_KEY);
-  _resetCode = null;
-  document.getElementById('resetArea').style.display = 'none';
-  document.getElementById('loginLocked').style.display = 'none';
-  document.getElementById('loginAttempts').textContent = '';
-  writeLog('RESET', 'Reset mật khẩu về mặc định');
-  showToast('✅ Đã reset — dùng mật khẩu mặc định để đăng nhập');
-}
-
-// ── ĐĂNG XUẤT ──
-function doLogout() {
-  if (!confirm('Đăng xuất?')) return;
-  writeLog('LOGOUT', 'Đăng xuất thủ công');
-  clearTimeout(_idleTimer);
-  _doLogoutSilent();
-}
-
-// ── ĐỔI MẬT KHẨU ──
-async function doChangePw() {
-  const old  = document.getElementById('pwOld').value;
-  const new1 = document.getElementById('pwNew1').value;
-  const new2 = document.getElementById('pwNew2').value;
-  const errEl = document.getElementById('changePwError');
-
-  const okOld = await checkPw(old);
-  if (!okOld) { errEl.textContent = '❌ Mật khẩu hiện tại không đúng'; errEl.style.display = 'block'; return; }
-  if (new1.length < 8) { errEl.textContent = '❌ Mật khẩu mới phải ít nhất 8 ký tự'; errEl.style.display = 'block'; return; }
-  if (!/[A-Z]/.test(new1)) { errEl.textContent = '❌ Cần có ít nhất 1 chữ HOA'; errEl.style.display = 'block'; return; }
-  if (!/[0-9]/.test(new1)) { errEl.textContent = '❌ Cần có ít nhất 1 chữ số'; errEl.style.display = 'block'; return; }
-  if (new1 !== new2) { errEl.textContent = '❌ Mật khẩu mới không khớp'; errEl.style.display = 'block'; return; }
-
-  const newHash = await hashPw(new1);
-  LS.set(PW_KEY, newHash);
-  document.getElementById('changePwModal').classList.remove('show');
-  ['pwOld','pwNew1','pwNew2'].forEach(id => document.getElementById(id).value = '');
-  errEl.style.display = 'none';
-  writeLog('CHANGE_PW', 'Đổi mật khẩu thành công');
-  showToast('✅ Đổi mật khẩu thành công!');
-}
-
 // ── XEM AUDIT LOG + QUẢN LÝ THIẾT BỊ ──
 function showAuditLog() {
   const logs = JSON.parse(LS.get('scKV1_log') || '[]');
@@ -1683,65 +1706,6 @@ function _clearDeviceHistory() {
   LS.set('scKV1_log', JSON.stringify(filtered));
   writeLog('CLEAR_HISTORY', 'Xóa lịch sử thiết bị');
   showToast('✅ Đã xóa lịch sử thiết bị');
-}
-
-// ── BẢO VỆ GITHUB TOKEN: mã hóa trước khi lưu ──
-async function encryptToken(token) {
-  try {
-    if (typeof crypto !== 'undefined' && crypto.subtle) {
-      const key = await crypto.subtle.importKey('raw',
-        new TextEncoder().encode('scKV1_enc_key_26').slice(0,16),
-        { name: 'AES-GCM' }, false, ['encrypt']);
-      const iv  = crypto.getRandomValues(new Uint8Array(12));
-      const enc = await crypto.subtle.encrypt({ name:'AES-GCM', iv },
-        key, new TextEncoder().encode(token));
-      const toHex = b => Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');
-      return toHex(iv) + ':' + toHex(enc);
-    }
-  } catch(e) {}
-  // Fallback: XOR đơn giản (base64)
-  const k = 'scKV1_enc_key_26';
-  let out = '';
-  for (let i = 0; i < token.length; i++)
-    out += String.fromCharCode(token.charCodeAt(i) ^ k.charCodeAt(i % k.length));
-  return 'xor:' + btoa(out);
-}
-
-async function decryptToken(stored) {
-  try {
-    if (stored.startsWith('xor:')) {
-      const k = 'scKV1_enc_key_26';
-      const raw = atob(stored.slice(4));
-      let out = '';
-      for (let i = 0; i < raw.length; i++)
-        out += String.fromCharCode(raw.charCodeAt(i) ^ k.charCodeAt(i % k.length));
-      return out;
-    }
-    if (typeof crypto !== 'undefined' && crypto.subtle) {
-      const [ivHex, encHex] = stored.split(':');
-      const fromHex = h => new Uint8Array(h.match(/.{2}/g).map(b=>parseInt(b,16)));
-      const key = await crypto.subtle.importKey('raw',
-        new TextEncoder().encode('scKV1_enc_key_26').slice(0,16),
-        { name: 'AES-GCM' }, false, ['decrypt']);
-      const dec = await crypto.subtle.decrypt(
-        { name:'AES-GCM', iv: fromHex(ivHex) }, key, fromHex(encHex));
-      return new TextDecoder().decode(dec);
-    }
-  } catch { return ''; }
-  return '';
-}
-
-async function getGHToken() {
-  const stored = LS.get(GITHUB_TOKEN_KEY);
-  if (!stored) return '';
-  // Phân biệt token cũ (plaintext ghp_...) với token mới (đã mã hóa)
-  if (stored.startsWith('ghp_') || stored.startsWith('github_')) return stored;
-  return await decryptToken(stored);
-}
-
-async function saveGHToken(token) {
-  const encrypted = await encryptToken(token);
-  LS.set(GITHUB_TOKEN_KEY, encrypted);
 }
 
 // ── KIỂM TRA SESSION ──
