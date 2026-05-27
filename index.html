@@ -1281,15 +1281,43 @@ let _idleTimer  = null;
 let _resetCode  = null;  // mã xác nhận reset tạm thời
 
 // ── HASH mật khẩu (SHA-256 đơn giản qua Web Crypto) ──
+// ── HASH mật khẩu — dùng crypto.subtle nếu có, fallback đơn giản nếu không ──
 async function hashPw(pw) {
-  const enc = new TextEncoder();
-  const data = enc.encode('scKV1_salt_2026_' + pw.trim());
-  const buf  = await crypto.subtle.digest('SHA-256', data);
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+  const salted = 'scKV1_salt_2026_' + String(pw).trim();
+  // Thử Web Crypto API trước
+  try {
+    if (typeof crypto !== 'undefined' && crypto.subtle) {
+      const enc  = new TextEncoder();
+      const buf  = await crypto.subtle.digest('SHA-256', enc.encode(salted));
+      return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+    }
+  } catch(e) {}
+  // Fallback: hash đơn giản (djb2 mở rộng) — đủ dùng khi crypto.subtle không có
+  let h = 5381;
+  for (let i = 0; i < salted.length; i++) {
+    h = ((h << 5) + h) ^ salted.charCodeAt(i);
+    h = h & 0xFFFFFFFF;
+  }
+  // Thêm vòng thứ 2 để tăng độ phức tạp
+  let h2 = 0x811c9dc5;
+  for (let i = 0; i < salted.length; i++) {
+    h2 ^= salted.charCodeAt(i);
+    h2 = (h2 * 0x01000193) & 0xFFFFFFFF;
+  }
+  return (h >>> 0).toString(16).padStart(8,'0') + (h2 >>> 0).toString(16).padStart(8,'0');
 }
 
 async function getStoredHash() {
-  return LS.get(PW_KEY) || await hashPw(DEFAULT_PW);
+  const stored = LS.get(PW_KEY);
+  if (!stored) return await hashPw(DEFAULT_PW);
+  // Kiểm tra hash có đúng độ dài không (SHA-256 = 64 chars, fallback = 16 chars)
+  // Nếu lưu SHA-256 (64 chars) nhưng giờ dùng fallback (16 chars) → xóa đi hash lại
+  const testHash = await hashPw('test');
+  if (stored.length !== testHash.length) {
+    LS.remove(PW_KEY); // xóa hash cũ không tương thích
+    return await hashPw(DEFAULT_PW);
+  }
+  return stored;
 }
 
 async function checkPw(entered) {
@@ -1659,28 +1687,48 @@ function _clearDeviceHistory() {
 
 // ── BẢO VỆ GITHUB TOKEN: mã hóa trước khi lưu ──
 async function encryptToken(token) {
-  const key = await crypto.subtle.importKey('raw',
-    new TextEncoder().encode('scKV1_enc_key_26').slice(0,16),
-    { name: 'AES-GCM' }, false, ['encrypt']);
-  const iv  = crypto.getRandomValues(new Uint8Array(12));
-  const enc = await crypto.subtle.encrypt({ name:'AES-GCM', iv },
-    key, new TextEncoder().encode(token));
-  // Lưu: iv(hex) + ':' + ciphertext(hex)
-  const toHex = b => Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');
-  return toHex(iv) + ':' + toHex(enc);
+  try {
+    if (typeof crypto !== 'undefined' && crypto.subtle) {
+      const key = await crypto.subtle.importKey('raw',
+        new TextEncoder().encode('scKV1_enc_key_26').slice(0,16),
+        { name: 'AES-GCM' }, false, ['encrypt']);
+      const iv  = crypto.getRandomValues(new Uint8Array(12));
+      const enc = await crypto.subtle.encrypt({ name:'AES-GCM', iv },
+        key, new TextEncoder().encode(token));
+      const toHex = b => Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,'0')).join('');
+      return toHex(iv) + ':' + toHex(enc);
+    }
+  } catch(e) {}
+  // Fallback: XOR đơn giản (base64)
+  const k = 'scKV1_enc_key_26';
+  let out = '';
+  for (let i = 0; i < token.length; i++)
+    out += String.fromCharCode(token.charCodeAt(i) ^ k.charCodeAt(i % k.length));
+  return 'xor:' + btoa(out);
 }
 
 async function decryptToken(stored) {
   try {
-    const [ivHex, encHex] = stored.split(':');
-    const fromHex = h => new Uint8Array(h.match(/.{2}/g).map(b=>parseInt(b,16)));
-    const key = await crypto.subtle.importKey('raw',
-      new TextEncoder().encode('scKV1_enc_key_26').slice(0,16),
-      { name: 'AES-GCM' }, false, ['decrypt']);
-    const dec = await crypto.subtle.decrypt(
-      { name:'AES-GCM', iv: fromHex(ivHex) }, key, fromHex(encHex));
-    return new TextDecoder().decode(dec);
+    if (stored.startsWith('xor:')) {
+      const k = 'scKV1_enc_key_26';
+      const raw = atob(stored.slice(4));
+      let out = '';
+      for (let i = 0; i < raw.length; i++)
+        out += String.fromCharCode(raw.charCodeAt(i) ^ k.charCodeAt(i % k.length));
+      return out;
+    }
+    if (typeof crypto !== 'undefined' && crypto.subtle) {
+      const [ivHex, encHex] = stored.split(':');
+      const fromHex = h => new Uint8Array(h.match(/.{2}/g).map(b=>parseInt(b,16)));
+      const key = await crypto.subtle.importKey('raw',
+        new TextEncoder().encode('scKV1_enc_key_26').slice(0,16),
+        { name: 'AES-GCM' }, false, ['decrypt']);
+      const dec = await crypto.subtle.decrypt(
+        { name:'AES-GCM', iv: fromHex(ivHex) }, key, fromHex(encHex));
+      return new TextDecoder().decode(dec);
+    }
   } catch { return ''; }
+  return '';
 }
 
 async function getGHToken() {
