@@ -1,4 +1,88 @@
-g phát hiện nghi vấn./.
+6260943	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+CSNU6110263	0	0		150626	02zz0706		C	0		
+OOCU1195700	0	0		150626	02zz0706		C	0		
+OOLU0234731	0	0		150626	02zz0706		C	0		
+CSLU6345933	0	0		150626	02zz0706		C	0		
+FFAU3323735	0	0		150626	02zz0706		C	0		
+FFAU3392715	0	0		150626	02zz0706		C	0		
+BEAU2132317	1	0	1906261613	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+GAOU7043160	1	0	1706260916	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+ZCSU7644704	1	0	1706260917	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+JXLU4722110	1	0	1606261449	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+TIIU4868114	1	0	1706260917	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+TCNU3179209	0	0		150626	02zz0706		C	0		
+BMOU1663458	1	0	1906261129	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+TWCU8229398	0	0		150626	02zz0706		C	0		
+TRHU4742820	1	0	1906261756	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+TWCU8198548	1	0	1906261802	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+HPCU4698256	1	0	1906261616	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+TRHU7853386	1	0	1906261102	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+TCLU6113770	1	0	1606261040	080626	02zz0706	02ci0192	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+EMCU8535726	1	0	1706261549	030626	02zz0706	02ci0733	C	0		Lô hàng gồm 01 cont còn nguyên seal theo B/L gốc. Kiểm tra thực tế toàn bộ lô hàng = 1.429 kiện hàng bằng phương pháp th
+UETU5719344	1	0	1906261755	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+TIIU5671773	0	0		150626	02zz0706		C	0		
+TXGU5560475	0	0		150626	02zz0706		C	0		
+TWCU2104460	1	0	1806261007	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+VVUU9006362	1	0	2006261455	150626	02zz0706	02ci0192	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+FCIU7576019	0	0		150626	02zz0706		C	0		
+TXGU5558930	1	0	1906261034	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+TXGU6009111	0	0		150626	02zz0706		C	0		
+TCNU1053206	1	0	1906261045	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+TWCU8253394	1	0	1906261753	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+TWCU8137100	1	0	2006261643	150626	02zz0706	02ci0192	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+TWCU8252910	0	0		150626	02zz0706		C	0		
+SEGU5378944	0	0		150626	02zz0706		C	0		
+TCNU5727868	0	0		150626	02zz0706		C	0		
+TIIU6107011	0	0		150626	02zz0706		C	0		
+BEAU4130822	0	0		150626	02zz0706		C	0		
+TCKU7731477	0	0		150626	02zz0706		C	0		
+TXGU7317340	0	0		150626	02zz0706		C	0		
+CMAU4534035	0	0		150626	02zz0706		C	0		
+CMAU9609780	0	0		150626	02zz0706		C	0		
+ECMU5489139	0	0		150626	02zz0706		C	0		
+CMAU6254809	0	0		150626	02zz0706		C	0		
+TCKU6381013	0	0		150626	02zz0706		C	0		
+MSNU8045742	1	0	1306261427	050626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+TRHU8659312	1	0	1506261519	050626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+XYLU1381187	1	0	1006261403	050626	02zz0706	02ci0192	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+OOCU9640592	1	0	0606261033	030626	02zz0706	02ci0609	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+CSNU2562080	1	0	0606261508	050626	02zz0706	02ci0609	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+TIIU6348507	0	0		150626	02zz0706		C	0		
+TLLU4616557	0	0		150626	02zz0706		C	0		
+DFSU7499528	0	0		150626	02zz0706		C	0		
+CMAU2742317	0	0		150626	02zz0706		C	0		
+FCIU6639426	0	0		150626	02zz0706		C	0		
+CMAU5964386	0	0		150626	02zz0706		C	0		
+CAAU7636499	0	0		150626	02zz0706		C	0		
+TCLU8519562	1	0	2006261552	150626	02zz0706	02ci0658	C	0		Hàng phù hợp khai báo
+DRYU9470564	0	0		150626	02zz0706		C	0		
+ONEU5535439	0	0		150626	02zz0706		C	0		
+CSNU5736210	1	0	1606261449	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+CBHU8264552	1	0	1606261449	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+CSNU7280520	1	0	1606261448	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+SITU2804216	1	0	1906261450	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+HPCU5032979	1	0	1906261655	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+SEGU3507180	1	0	1906261424	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+SITU9227883	0	0		150626	02zz0706		C	0		
+TIIU5571521	0	0		150626	02zz0706		C	0		
+TIIU6428599	0	0		150626	02zz0706		C	0		
+TIIU6679280	1	0	1906261547	150626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+TIIU6745660	0	0		150626	02zz0706		C	0		
+TWCU8202592	1	0	1006261609	030626	02zz0706	02ci0192	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+WHLU0707822	1	0	0906261610	030626	02zz0706	02ci0192	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+MSMU7598550	1	0	1506261419	050626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+IAAU1089363	1	0	0806261539	030626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+OOCU1074143	1	0	0806261551	050626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+FANU3008830	1	0	1206261107	030626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+WHSU5343610	1	0	0806261512	030626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+WHSU8817708	1	0	0806261511	030626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+WHLU5714552	1	0	0806261620	030626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+WHSU8772162	1	0	1006261708	030626	02zz0706	02ci0192	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+WHSU8450952	0	0		030626	02zz0706		C	0		
+WHSU6184690	1	0	0806260957	030626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+WHSU5310849	1	0	0806261354	030626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+WHSU6015719	1	0	0406261615	030626	02zz0706	02ci0609	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
+WHSU6587289	1	0	1006261536	030626	02zz0706	02ci0192	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
 WHSU8260886	1	0	1006261536	030626	02zz0706	02ci0192	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
 WHSU5292508	1	0	0806260929	030626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
 WHSU0577262	1	0	0406261552	030626	02zz0706	02ci0609	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
@@ -126,7 +210,7 @@ SEGU5034609	1	0	1506260913	110626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu
 DRYU4037309	1	0	1506260912	110626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
 HLHU8389404	1	0	1206261356	110626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
 SKHU6443334	1	0	1806261533	110626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
-HMMU4861239	0	0		110626	02zz0706		C	0		
+HMMU4861239	1	0	1906261751	110626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
 TCNU5786963	0	0		110626	02zz0706		C	0		
 HMMU4455760	1	0	1306260935	110626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
 TCLU5855861	0	0		110626	02zz0706		C	0		
@@ -144,7 +228,7 @@ DFSU7514031	1	0	1306261348	110626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu
 ECMU5787107	1	0	1506260912	110626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
 GAOU6830665	1	0	1306261347	110626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
 ECMU5775826	1	0	1506260911	110626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
-GCXU6094139	0	0		110626	02zz0706		C	0		
+GCXU6094139	1	0	1906261729	110626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
 CMAU7360560	0	0		110626	02zz0706		C	0		
 CSNU8448877	1	0	1506260946	110626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
 OOLU9415176	1	0	1306261504	110626	02zz0706	02ci0752	C	0		hình ảnh soi chiếu không phát hiện nghi vấn./.
