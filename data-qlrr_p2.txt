@@ -766,3 +766,12 @@ TGHU6052987	S	3	1 BULK, SOLID, GRAN, 23033000 (HS)NCM:23	821/2026/SCNK-HQKV2	T
 EGSU5067889	S	3	1 BULKS, 030342 3,082 BAGS OF FROZEN TUN	821/2026/SCNK-HQKV2	T
 TRHU8567767	S	3	22 BALES, 470710 WASTE PAPER#HS CODE 470	821/2026/SCNK-HQKV2	T
 GAOU6261390	S	3	22 BALES, 470710 WASTE PAPER#HS CODE 470	821/2026/SCNK-HQKV2	T
+SKLU0405612	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
+SKLU0708861	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
+SKLU1338329	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
+SKLU1547714	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
+SKLU1551740	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
+SKLU1560790	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
+SKLU1631131	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
+SKLU1812994	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
+SKLU1973324	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
