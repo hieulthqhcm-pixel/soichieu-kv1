@@ -1431,3 +1431,10 @@ MSNU7300798	S	1	2 PACKAGE(S),MACHINE HS CODE:846595	866/2026/SCNK-HQKV2	T
 MSMU4105937	S	1	920 CARTON(S),LED PANEL LIGHT ACCESSORIE	866/2026/SCNK-HQKV2	T
 FBIU0399373	S	1	447 PACKAGE(S),AIR DUSTER HS CODE:846719	866/2026/SCNK-HQKV2	T
 CAIU9896517	S	1	497 CARTON(S),BASIN-POT HS CODE:73239310	866/2026/SCNK-HQKV2	T
+BEAU2342822	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
+CAIU2924263	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
+HALU2035199	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
+HALU2058661	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
+SKLU0707905	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
+SKLU1503362	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
+SKLU1572933	C	4	Phế liệu và mảnh vụn của thép hợp kim: L		N
